@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<tryton>
+  <data>    
+    <!-- Activity -->
+    <record id="sale_activity_cart" model="workflow.activity">
+      <field name="name">Cart</field>
+      <field name="workflow" ref="sale.sale_workflow"/>
+      <field name="flow_start" eval="True"/>
+      <field name="kind">function</field>
+      <field name="action">write({'state': 'draft'})</field>
+    </record>
+    <record id="sale_transition_cart_confirmed" model="workflow.transition">
+      <field name="act_from" ref="sale_activity_cart"/>
+      <field name="act_to" ref="sale.sale_activity_confirmed"/>
+      <field name="signal">confirm</field>
+    </record>
+       
+    <record model="ir.action.act_window" id="act_sale_form_draft">
+      <field name="name">Draft Sales</field>
+      <field name="res_model">sale.sale</field>
+      <field name="view_type">form</field>
+      <field name="domain">[('state', '=', 'draft'),('is_cart', '=', False)]</field>
+    </record>
+    
+    <record model="ir.action.act_window" id="act_sale_form_cart">
+      <field name="name">Cart Sales</field>
+      <field name="res_model">sale.sale</field>
+      <field name="view_type">form</field>
+      <field name="domain">[('state','in',['draft', 'quotation']),('is_cart', '=', True)]</field>
+    </record>
+    
+    <record model="ir.action.act_window.view" id="act_sale_form_cart_view1">
+        <field name="sequence" eval="10"/>
+        <field name="view" ref="sale.sale_view_tree"/>
+        <field name="act_window" ref="act_sale_form_cart"/>
+    </record>
+    <record model="ir.action.act_window.view" id="act_sale_form_cart_view2">
+        <field name="sequence" eval="20"/>
+        <field name="view" ref="sale.sale_view_form"/>
+        <field name="act_window" ref="act_sale_form_cart"/>
+    </record>
+    
+    <menuitem action="act_sale_form_cart" id="menu_action_sale_cart" parent="sale.menu_sale_form" sequence="5"/>
+    
+    <record model="ir.action.act_window" id="act_sale_form_quotation">
+      <field name="name">Quotation Sales</field>
+      <field name="res_model">sale.sale</field>
+      <field name="view_type">form</field>
+      <field name="domain">[('state', '=', 'quotation'),('is_cart', '=', False)]</field>
+    </record>
+
+  </data>
+</tryton>
