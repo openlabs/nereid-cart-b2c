@@ -8,11 +8,11 @@
     :license: GPLv3, see LICENSE for more details
 '''
 from trytond.model import ModelView, ModelSQL, fields
-from trytond.pyson import Not, Equal, Eval
+from trytond.pyson import Not, Equal, Eval, In
 
 STATE_EXC_CART = {
-        'readonly': Not(Equal(Eval('state'), 'cart')),
-        #'required': Not(Equal(Eval('state'), 'cart')),
+        'readonly': Not(In(Eval('state'), ['draft', 'cart'])),
+        #'required': Not(In(Eval('state'), ['draft', 'cart'])),
         }
 
 

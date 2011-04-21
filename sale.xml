@@ -7,12 +7,17 @@
       <field name="workflow" ref="sale.sale_workflow"/>
       <field name="flow_start" eval="True"/>
       <field name="kind">function</field>
-      <field name="action">write({'state': 'draft'})</field>
+      <field name="action">write({'state': 'cart'})</field>
     </record>
     <record id="sale_transition_cart_confirmed" model="workflow.transition">
       <field name="act_from" ref="sale_activity_cart"/>
       <field name="act_to" ref="sale.sale_activity_confirmed"/>
       <field name="signal">confirm</field>
+    </record>
+    <record model="workflow.transition" id="sale_transition_cart_cancel">
+        <field name="act_from" ref="sale_activity_cart"/>
+        <field name="act_to" ref="sale.sale_activity_cancel"/>
+        <field name="signal">cancel</field>
     </record>
        
     <record model="ir.action.act_window" id="act_sale_form_draft">

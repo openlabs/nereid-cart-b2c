@@ -398,7 +398,6 @@ Add both products to the cart, then delete a line, then clear cart and verify al
     ...     sales = Sale.find([])
     ...     len(sales)
     ...     sale = sales[0]
-    ...     len(sale.lines)
     <Response streamed [302 FOUND]>
     <Response streamed [302 FOUND]>
     6
@@ -413,5 +412,169 @@ Add both products to the cart, then delete a line, then clear cart and verify al
     2
     15.0
     <Response streamed [302 FOUND]>
+    5
+
+Test cart with login::
+
+Call the response of /cart and check if it retains same cart::
+
+    >>> with app.test_client() as client:
+    ...     client.post('/login', 
+    ...         data=dict(email='user@example.com', password='password'))
+    ...     cart_response = client.get('/cart')
+    ...     cart_response_2 = client.get('/cart')
+    ...
+    <Response streamed [302 FOUND]>
+    >>> cart_response.data == cart_response_2.data
+    True
+
+Add items to a cart::
+    >>> with app.test_client() as client:
+    ...     client.post('/login', 
+    ...         data=dict(email='user@example.com', password='password'))
+    ...     cart_response = client.get('/cart')
+    ...     client.post('/cart/add', data={
+    ...         'product': product.id,
+    ...         'quantity': 10,
+    ...     })
+    ...
+    <Response streamed [302 FOUND]>
+    <Response streamed [302 FOUND]>
+
+Check if the Sale Order is created::
+
+    >>> sales = Sale.find([])
+    >>> len(sales)
     6
-    0
+    >>> sale = sales[0]
+    >>> len(sale.lines)
+    1
+    >>> line = sale.lines[0]
+    >>> line.product.id
+    1
+    >>> line.quantity
+    10.0
+
+Add the same item but 20 units::
+
+    >>> with app.test_client() as client:
+    ...     client.post('/login', 
+    ...         data=dict(email='user@example.com', password='password'))
+    ...     cart_response = client.get('/cart')
+    ...     client.post('/cart/add', data={
+    ...         'product': product.id,
+    ...         'quantity': 20,
+    ...     })
+    <Response streamed [302 FOUND]>
+    <Response streamed [302 FOUND]> 
+    >>> sales = Sale.find([])
+    >>> len(sales)
+    6
+    >>> sale = sales[0]
+    >>> sale.total_amount == Decimal('200')
+    True
+    >>> len(sale.lines)
+    1
+    >>> line = sale.lines[0]
+    >>> line.product.id
+    1
+    >>> line.quantity
+    20.0
+
+Now add 5 units of this product to the cart::
+
+    >>> with app.test_client() as client:
+    ...     client.post('/login', 
+    ...         data=dict(email='user@example.com', password='password'))
+    ...     cart_response = client.get('/cart')
+    ...     client.post('/cart/add', data={
+    ...         'product': product2.id,
+    ...         'quantity': 5,
+    ...     })
+    <Response streamed [302 FOUND]>
+    <Response streamed [302 FOUND]>
+    >>> Sale = Model.get('sale.sale')
+    >>> sales = Sale.find([])
+    >>> len(sales)
+    6
+    >>> sale = sales[0]
+    >>> sale.total_amount == Decimal('250')
+    True
+    >>> len(sale.lines)
+    2
+    >>> line = sale.lines[0]
+    >>> line.product.id
+    1
+    >>> line.quantity
+    20.0
+    >>> line2 = sale.lines[1]
+    >>> line2.product.id == product2.id
+    True
+    >>> line2.quantity
+    5.0
+
+Delete a line in the cart::
+
+    >>> with app.test_client() as client:
+    ...     client.post('/login', 
+    ...         data=dict(email='user@example.com', password='password'))
+    ...     cart_response = client.get('/cart')
+    ...     client.get('/cart/delete/' + str(line.id))
+    <Response streamed [302 FOUND]>
+    <Response streamed [302 FOUND]>
+    >>> Sale = Model.get('sale.sale')
+    >>> sales = Sale.find([])
+    >>> len(sales)
+    6
+    >>> sale = sales[0]
+    >>> sale.total_amount == Decimal('50')
+    True
+    >>> len(sale.lines)
+    1
+    >>> line = sale.lines[0]
+    >>> line.id == line2.id
+    True
+
+Test Clearing of cart::
+
+    >>> with app.test_client() as client:
+    ...     client.post('/login', 
+    ...         data=dict(email='user@example.com', password='password'))
+    ...     cart_response = client.get('/cart')
+    ...     client.get('/cart/clear')
+    <Response streamed [302 FOUND]>
+    <Response streamed [302 FOUND]>
+    >>> Sale = Model.get('sale.sale')
+    >>> sales = Sale.find([])
+    >>> len(sales)
+    5
+
+Create another party::
+
+    >>> customer2 = Party(name='Customer2')
+    >>> customer2.save() 
+    >>> email2 = ContactMechanism(type='email', value='user@example2.com', 
+    ...     party=customer2)
+    >>> email2.save()
+    >>> customer2.addresses.append(Address(
+    ...     name='Customer Address', email=email2, password='password'))
+    >>> customer2.save()
+
+Now try to fetch cart for both the customers::
+
+    >>> with app.test_client() as client:
+    ...     client.post('/login', 
+    ...         data=dict(email='user@example.com', password='password'))
+    ...     client.get('/cart')
+    <Response streamed [302 FOUND]>
+    <Response streamed [200 OK]>
+    >>> with app.test_client() as client:
+    ...     client.post('/login', 
+    ...         data=dict(email='user@example2.com', password='password'))
+    ...     client.get('/cart')
+    <Response streamed [302 FOUND]>
+    <Response streamed [200 OK]>
+    >>> Sale = Model.get('sale.sale')
+    >>> sales = Sale.find([])
+    >>> len(sales)
+    7

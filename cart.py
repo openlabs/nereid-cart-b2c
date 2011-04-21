@@ -80,7 +80,7 @@ class Cart(ModelSQL, ModelView):
 
         cart = self.open_cart()
         if cart.sale:
-            sale_obj.workflow_trigger_validate([cart.sale.id], 'cancel')
+            sale_obj.workflow_trigger_validate(cart.sale.id, 'cancel')
             sale_obj.delete(cart.sale.id)
         self.delete(cart.id)
         flash('Your shopping cart has been cleared')
@@ -100,7 +100,7 @@ class Cart(ModelSQL, ModelView):
         if ids:
             cart = self.browse(ids[0])
             # Check if a sale order is still attached
-            if (not cart.sale) or (not cart.sale.state == 'draft'):
+            if (not cart.sale) or (not cart.sale.state in ['draft', 'cart']):
                 self.delete(cart.id)
                 ids = None
 
