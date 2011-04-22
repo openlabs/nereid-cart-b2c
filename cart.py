@@ -7,6 +7,7 @@
     :copyright: (c) 2010-2011 by Openlabs Technologies & Consulting (P) LTD
     :license: GPLv3, see LICENSE for more details
 '''
+from decimal import Decimal
 from nereid import jsonify, render_template, flash
 from nereid.helpers import login_required, url_for
 from nereid.globals import session, request
@@ -19,18 +20,14 @@ from .forms import AddtoCartForm
 
 
 # pylint: disable-msg=E1101
-class Cart(ModelSQL, ModelView):
+class Cart(ModelSQL):
     """
     Shopping Cart plays the link between a customer's shopping experience
     and the creation of a Sale Order in the backend.
 
     A Draft Sale Order is maintained through out the process of the existance
     of a cart which is finally converted into a confirmed sale order once 
-    the process is complete. As the ideal design would be a B2B env
-    where the payment could also be made on credit and the Sale Order 
-    process itself is more aligned to the B2B model, the payment will be made
-    as a payment line in a given journal.
-
+    the process is complete. 
     """
     _name = 'nereid.cart'
     _description = 'Shopping Cart'
@@ -43,25 +40,15 @@ class Cart(ModelSQL, ModelView):
     def cart_size(self):
         "Returns the sum of quantities in the cart"
         cart = self.open_cart()
-        return sum([line.quantity for line in cart.sale.lines])
-
-    #@property
-    #def current_user_pricelist(self):
-    #    'DEPRECIATED: Return the pricelist of the current session'
-    #    import warnings
-    #    warnings.warn("""This method will be depreciated in upcoming release, 
-    #    Use the method current_user_pricelist in product.product
-    #        """, DeprecationWarning)
-    #
-    #    product_obj = self.pool.get('product.product')
-    #    return product_obj.current_user_pricelist
+        return sum([line.quantity for line in cart.sale.lines]) \
+            if cart.sale else Decimal('0')
 
     @login_required
     def _get_addresses(self):
         'Returns a list of tuple of addresses'
         party = request.nereid_user.party
-        address_obj = self.pool.get('party.address')
-        return address_obj.name_get_([a.id for a in partner.address])
+        return [(address.id, address.full_address) \
+            for address in party.addresses]
 
     def view_cart(self):
         """Returns a view of the shopping cart
@@ -86,39 +73,55 @@ class Cart(ModelSQL, ModelView):
         flash('Your shopping cart has been cleared')
         return redirect(url_for('nereid.cart.view_cart'))
         
-    def open_cart(self):
+    def open_cart(self, create_order=False):
         """
+        :param create_order: Create a sale order and attach 
+            if one does not already exist.
+            
         Returns the browse record for the shopping cart of the user
         Creates one if it doesn't exist
-        The method is guaranteed to return a cart
+        The method is guaranteed to return a cart but the cart may not have 
+            a sale order. For methods like add to cart which definitely need 
+            a sale order pass 
+        :attr: create_order = True so that an order is 
+            also assured.
         """
         if request.is_guest_user:
             ids = self.search([('sessionid', '=', session.sid)], limit=1)
         else:
             ids = self.search([('user', '=', session['user'])], limit=1)
 
-        if ids:
-            cart = self.browse(ids[0])
-            # Check if a sale order is still attached
-            if (not cart.sale) or (not cart.sale.state in ['draft', 'cart']):
-                self.delete(cart.id)
-                ids = None
-
         if not ids:
-            sale_obj = self.pool.get('sale.sale')
-            site = request.nereid_website
-            sale_values = {
-                'party': request.nereid_user.party.id,
-                'currency': session.get('currency', site.company.currency.id),
-                'company': site.company.id,
-                }
+            # There is no cart, so create one, if create_order
+            # is true then create sale order else leave sale False
+            sale = False
+            if create_order == True:
+                sale = self.create_draft_sale()
             cart_id = self.create({
-                'user': session['user'] if 'user' in session else False,
+                'user': session.get('user', False),
                 'sessionid': session.sid,
-                'sale': sale_obj.create(sale_values)
-                })
+                'sale': sale,
+            })
             cart = self.browse(cart_id)
+        else:
+            # The Cart already exists
+            # Ensure that the sale order in the cart if any is a draft
+            cart = self.browse(ids[0])
+            if cart.sale and cart.sale.state not in ('draft', 'cart'):
+                self.write(cart.id, {'sale': False})
+            if create_order and not cart.sale:
+                self.write(cart.id, {'sale': self.create_draft_sale()})
         return cart
+        
+    def create_draft_sale(self):
+        sale_obj = self.pool.get('sale.sale')
+        site = request.nereid_website
+        sale_values = {
+            'party': request.nereid_user.party.id,
+            'currency': session.get('currency', site.company.currency.id),
+            'company': site.company.id,
+                }
+        return sale_obj.create(sale_values)
 
     def add_to_cart(self):
         """
@@ -135,7 +138,7 @@ class Cart(ModelSQL, ModelView):
         """
         form = AddtoCartForm(request.form)
         if request.method == 'POST' and form.validate():
-            cart = self.open_cart()
+            cart = self.open_cart(create_order=True)
             self._add_or_update(cart, form.product.data, form.quantity.data)
             flash('The order has been successfully updated')
             if request.is_xhr:

@@ -268,6 +268,13 @@ Call the cart with two different applications and assert they are not equal::
     <Response streamed [200 OK]>
     >>> cart_response.data == cart_response_2.data
     False
+    
+Check if the Sale Order is created::
+
+    >>> Sale = Model.get('sale.sale')
+    >>> sales = Sale.find([])
+    >>> len(sales)
+    0
 
 Add an item to the cart::
 
@@ -283,7 +290,7 @@ Check if the Sale Order is created::
     >>> Sale = Model.get('sale.sale')
     >>> sales = Sale.find([])
     >>> len(sales)
-    3
+    1
     >>> sale = sales[0]
     >>> len(sale.lines)
     1
@@ -306,7 +313,7 @@ Check if the Sale Order is created::
 
     >>> sales = Sale.find([])
     >>> len(sales)
-    4
+    2
     >>> sale = sales[0]
     >>> len(sale.lines)
     1
@@ -350,7 +357,7 @@ Add both products to the cart and verify::
 
     >>> sales = Sale.find([])
     >>> len(sales)
-    5
+    3
     >>> sale = sales[0]
     >>> len(sale.lines)
     2
@@ -400,19 +407,19 @@ Add both products to the cart, then delete a line, then clear cart and verify al
     ...     sale = sales[0]
     <Response streamed [302 FOUND]>
     <Response streamed [302 FOUND]>
-    6
+    4
     2
     1
     10.0
     2
     15.0
     <Response streamed [302 FOUND]>
-    6
+    4
     1
     2
     15.0
     <Response streamed [302 FOUND]>
-    5
+    3
 
 Test cart with login::
 
@@ -445,7 +452,7 @@ Check if the Sale Order is created::
 
     >>> sales = Sale.find([])
     >>> len(sales)
-    6
+    4
     >>> sale = sales[0]
     >>> len(sale.lines)
     1
@@ -469,7 +476,7 @@ Add the same item but 20 units::
     <Response streamed [302 FOUND]> 
     >>> sales = Sale.find([])
     >>> len(sales)
-    6
+    4
     >>> sale = sales[0]
     >>> sale.total_amount == Decimal('200')
     True
@@ -496,7 +503,7 @@ Now add 5 units of this product to the cart::
     >>> Sale = Model.get('sale.sale')
     >>> sales = Sale.find([])
     >>> len(sales)
-    6
+    4
     >>> sale = sales[0]
     >>> sale.total_amount == Decimal('250')
     True
@@ -525,7 +532,7 @@ Delete a line in the cart::
     >>> Sale = Model.get('sale.sale')
     >>> sales = Sale.find([])
     >>> len(sales)
-    6
+    4
     >>> sale = sales[0]
     >>> sale.total_amount == Decimal('50')
     True
@@ -547,7 +554,7 @@ Test Clearing of cart::
     >>> Sale = Model.get('sale.sale')
     >>> sales = Sale.find([])
     >>> len(sales)
-    5
+    3
 
 Create another party::
 
@@ -577,4 +584,4 @@ Now try to fetch cart for both the customers::
     >>> Sale = Model.get('sale.sale')
     >>> sales = Sale.find([])
     >>> len(sales)
-    7
+    3

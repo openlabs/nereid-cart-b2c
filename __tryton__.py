@@ -3,7 +3,7 @@
 {
     'name': 'Nereid : Shopping Cart B2C',
     'version': '1.8.0.1',
-    'author': 'Open Labs Business Solutions',
+    'author': 'Openlabs Technologies & Consulting (P) Ltd.',
     'email': 'info@openlabs.co.in',
     'website': 'http://www.openlabs.co.in/',
     'description': '''
@@ -11,10 +11,10 @@
     - Hooks for Gateways    
     ''',
     'depends': [
-                "product",
-                "nereid_catalog",
-                "sale",
-                "sale_price_list",
+        "product",
+        "nereid_catalog",
+        "sale",
+        "sale_price_list",
         ],
     'xml': [
         'cart.xml',

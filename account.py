@@ -7,15 +7,29 @@
     :copyright: (c) 2010-2011 by Openlabs Technologies & Consulting (P) LTD
     :license: GPLv3, see LICENSE for more details
 '''
-
-from nereid import render_template, login_required, request
 from werkzeug.exceptions import NotFound
+from nereid import render_template, login_required, request
+from nereid.backend import ModelPagination
 
 from trytond.model import ModelSQL
 
-class Account(ModelSQL):
-    "Add elements to account context"
+class Account(ModelSQL, ModelPagination):
+    """When the account page is displayed it may be required to display a lot of
+        information. and this depends from site to site. So rather than 
+        rewriting the render page everytime it is optimal to have a context 
+        being rebuilt by subclassing.
+
+        This basic context builder builds sales, invoices and shipments, 
+        (only last 5) of the customer.
+
+        To add more items to the context, subclass the method and call super 
+        to get the result of this method and then add your content to it.
+    """
     _name = 'nereid.website'
+    
+    def __init__(self):
+        super(Account, self).__init__()
+        self.per_page = 9
 
     def account_context(self):
         "First get existing context and then add"
@@ -56,14 +70,14 @@ class Account(ModelSQL):
         return context
 
     @login_required
-    def sales(self):
+    def sales(self, page=1):
         'All sales'
         sale_obj = self.pool.get('sale.sale')
-        sales_ids = sale_obj.search(
+        sales_ids = sale_obj.paginate(
             [
             ('party', '=', request.nereid_user.party.id),
             ('state', '!=', 'draft')
-            ])
+            ], page, self.per_page)
         sales = sale_obj.browse(sales_ids)
         return render_template('sales.jinja', sales=sales)
 
@@ -82,14 +96,14 @@ class Account(ModelSQL):
         return render_template('sale.jinja', sale=sale)
 
     @login_required
-    def invoices(self):
+    def invoices(self, page=1):
         'List of Invoices'
         invoice_obj = self.pool.get('account.invoice')
-        invoice_ids = invoice_obj.search(
+        invoice_ids = invoice_obj.paginate(
             [
             ('party', '=', request.nereid_user.party.id),
             ('state', '!=', 'draft')
-            ])
+            ], page, self.per_page)
         invoices = invoice_obj.browse(invoice_ids)
         return render_template('invoices.jinja', invoices=invoices)
 
@@ -109,14 +123,14 @@ class Account(ModelSQL):
         return render_template('invoice.jinja', invoice=invoice)
 
     @login_required
-    def shipments(self):
+    def shipments(self, page=1):
         'List of Shipments'
         shipment_obj = self.pool.get('stock.shipment.out')
-        shipment_ids = shipment_obj.search(
+        shipment_ids = shipment_obj.paginate(
             [
             ('customer', '=', request.nereid_user.party.id),
             ('state', '!=', 'draft'),
-            ])
+            ], page, self.per_page)
         shipments = shipment_obj.browse(shipment_ids)
         return render_template('shipments.jinja', shipments=shipments)
 

@@ -8,13 +8,6 @@
     :license: GPLv3, see LICENSE for more details
 '''
 from trytond.model import ModelView, ModelSQL, fields
-from trytond.pyson import Not, Equal, Eval, In
-
-STATE_EXC_CART = {
-        'readonly': Not(In(Eval('state'), ['draft', 'cart'])),
-        #'required': Not(In(Eval('state'), ['draft', 'cart'])),
-        }
-
 
 class Sale(ModelSQL, ModelView):
     '''Sale Order in the current way requires
@@ -45,7 +38,5 @@ class Sale(ModelSQL, ModelView):
         super(Sale, self).__init__()
         if ('cart', 'Cart') not in self.state.selection:
             self.state.selection.insert(0, ('cart', 'Cart'))
-        self.invoice_address.states = STATE_EXC_CART
-        self.shipment_address.states = STATE_EXC_CART
 
 Sale()
