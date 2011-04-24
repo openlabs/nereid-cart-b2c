@@ -72,12 +72,12 @@ class Cart(ModelSQL):
         self.delete(cart.id)
         flash('Your shopping cart has been cleared')
         return redirect(url_for('nereid.cart.view_cart'))
-        
+
     def open_cart(self, create_order=False):
         """
         :param create_order: Create a sale order and attach 
             if one does not already exist.
-            
+
         Returns the browse record for the shopping cart of the user
         Creates one if it doesn't exist
         The method is guaranteed to return a cart but the cart may not have 
@@ -107,12 +107,12 @@ class Cart(ModelSQL):
             # The Cart already exists
             # Ensure that the sale order in the cart if any is a draft
             cart = self.browse(ids[0])
-            if cart.sale and cart.sale.state not in ('draft', 'cart'):
+            if cart.sale and cart.sale.state != 'draft':
                 self.write(cart.id, {'sale': False})
             if create_order and not cart.sale:
                 self.write(cart.id, {'sale': self.create_draft_sale()})
         return cart
-        
+
     def create_draft_sale(self):
         sale_obj = self.pool.get('sale.sale')
         site = request.nereid_website
@@ -120,6 +120,8 @@ class Cart(ModelSQL):
             'party': request.nereid_user.party.id,
             'currency': session.get('currency', site.company.currency.id),
             'company': site.company.id,
+            'is_cart': True,
+            'state': 'draft',
                 }
         return sale_obj.create(sale_values)
 

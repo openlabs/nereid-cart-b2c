@@ -8,7 +8,6 @@
     'website': 'http://www.openlabs.co.in/',
     'description': '''
     - B2C Shopping Cart.
-    - Hooks for Gateways    
     ''',
     'depends': [
         "product",

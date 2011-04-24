@@ -465,15 +465,17 @@ Check if the Sale Order is created::
 Add the same item but 20 units::
 
     >>> with app.test_client() as client:
-    ...     client.post('/login', 
+    ...     rv1 = client.post('/login', 
     ...         data=dict(email='user@example.com', password='password'))
     ...     cart_response = client.get('/cart')
-    ...     client.post('/cart/add', data={
+    ...     rv2 = client.post('/cart/add', data={
     ...         'product': product.id,
     ...         'quantity': 20,
     ...     })
-    <Response streamed [302 FOUND]>
-    <Response streamed [302 FOUND]> 
+    >>> rv1.status_code == 302
+    True
+    >>> rv2.status_code == 302
+    True
     >>> sales = Sale.find([])
     >>> len(sales)
     4
