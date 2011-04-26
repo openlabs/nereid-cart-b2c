@@ -10,3 +10,4 @@
 from .sale import *
 from .cart import *
 from .account import *
+from .testing import *
