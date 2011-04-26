@@ -28,9 +28,10 @@ def create_fiscal_year(obj, date=None, company=None):
     if company is None:
         company, = company_obj.search([], limit=1)
 
-    invoice_sequence = sequence_obj.create({
+    invoice_sequence = sequence_strict_obj.create({
+        'name': '%s' % date.year,
         'code': 'account.invoice',
-        'comapny': company,
+        'company': company,
         })
     fiscal_year = fiscal_year_obj.create({
         'name': '%s' % date.year,
@@ -38,6 +39,7 @@ def create_fiscal_year(obj, date=None, company=None):
         'end_date': date + relativedelta(month=12, day=31),
         'company': company,
         'post_move_sequence': sequence_obj.create({
+            'name': '%s' % date.year,
             'code': 'account.move',
             'company': company,
             }),
@@ -55,7 +57,7 @@ def create_coa_minimal(obj, company=None):
     """Create a minimal chart of accounts
     """
     account_template_obj = obj.pool.get('account.account.template')
-    account_obj = obj.pool.get('account.account.template')
+    account_obj = obj.pool.get('account.account')
     account_journal_obj = obj.pool.get('account.journal')
     create_chart_account_obj = obj.pool.get(
         'account.account.create_chart_account', type="wizard")
@@ -72,8 +74,10 @@ def create_coa_minimal(obj, company=None):
     create_chart_account_obj.execute(wiz_id, {}, 'account')
     # Stage 2
     create_chart_account_obj.execute(wiz_id, {
-        'account_template': account_template,
-        'company': company,
+        'form': {
+            'account_template': account_template,
+            'company': company,
+            }
         }, 'create_account')
     # Stage 3
     receivable, = account_obj.search([
@@ -85,9 +89,34 @@ def create_coa_minimal(obj, company=None):
         ('company', '=', company),
         ], limit=1)
     create_chart_account_obj.execute(wiz_id, {
-        'account_receivable': receivable,
-        'account_payable': payable,
+        'form': {
+            'account_receivable': receivable,
+            'account_payable': payable,
+            'company': company,
+            }
         }, 'create_properties')
+
+
+@testing_proxy.register()
+def get_account_by_kind(self, kind, company=None, silent=True):
+    """Returns an account with given spec
+
+    :param kind: receivable/payable/expense/revenue
+    :param silent: dont raise error if account is not found
+    """
+    account_obj = self.pool.get('account.account')
+    company_obj = self.pool.get('company.company')
+
+    if company is None:
+        company, = company_obj.search([], limit=1)
+
+    account_ids = account_obj.search([
+        ('kind', '=', kind),
+        ('company', '=', company)
+        ], limit=1)
+    if not account_ids and not silent:
+        raise Exception("Account not found")
+    return account_ids[0] if account_ids else False
 
 
 @testing_proxy.register()
