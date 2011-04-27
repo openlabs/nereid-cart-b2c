@@ -10,7 +10,7 @@
 from decimal import Decimal
 from nereid import jsonify, render_template, flash
 from nereid.helpers import login_required, url_for
-from nereid.globals import session, request
+from nereid.globals import session, request, current_app
 from werkzeug import redirect
 
 from trytond.model import ModelSQL, ModelView, fields
@@ -115,10 +115,24 @@ class Cart(ModelSQL):
 
     def create_draft_sale(self):
         sale_obj = self.pool.get('sale.sale')
+
         site = request.nereid_website
+
+        # Get the pricelist of active user, may be regd or guest
+        price_list = request.nereid_user.party.sale_price_list.id if \
+            request.nereid_user.party.sale_price_list else None
+        # If the regsitered user does not have a pricelist try for
+        # the pricelist of guest user
+        if not request.is_guest_user and price_list is None:
+            address_obj = self.pool.get('party.address')
+            guest_user = address_obj.browse(current_app.guest_user)
+            price_list = guest_user.party.sale_price_list.id if \
+                guest_user.party.sale_price_list else None
+
         sale_values = {
             'party': request.nereid_user.party.id,
-            'currency': session.get('currency', site.company.currency.id),
+            'currency': request.nereid_currency.id,
+            'price_list': price_list,
             'company': site.company.id,
             'is_cart': True,
             'state': 'draft',
