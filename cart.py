@@ -180,8 +180,10 @@ class Cart(ModelSQL):
                 'product': product,
                 '_parent_sale.currency': cart.sale.currency.id,
                 '_parent_sale.party': cart.sale.party.id,
+                '_parent_sale.price_list': cart.sale.price_list.id,
                 'unit': order_line.unit.id,
-                'quantity': quantity
+                'quantity': quantity,
+                'type': 'line'
                 }
             values.update(sale_line_obj.on_change_quantity(values))
             return sale_line_obj.write(order_line.id, values)
@@ -190,6 +192,7 @@ class Cart(ModelSQL):
                 'product': product,
                 '_parent_sale.currency': cart.sale.currency.id,
                 '_parent_sale.party': cart.sale.party.id,
+                '_parent_sale.price_list': cart.sale.price_list.id,
                 'sale': cart.sale.id,
                 'type': 'line',
                 'quantity': quantity,
