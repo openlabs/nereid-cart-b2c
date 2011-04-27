@@ -55,7 +55,7 @@ class Cart(ModelSQL):
 
         This method only handles GET. Unlike previous versions
         the checkout method has been moved to nereid.checkout.x
-        """ 
+        """
         cart = self.open_cart()
         return render_template('shopping-cart.jinja', cart=cart)
 
@@ -237,3 +237,27 @@ class Cart(ModelSQL):
 
 Cart()
 
+
+class Website(ModelSQL, ModelView):
+    """Set Currency behaviour change"""
+    _name = 'nereid.website'
+
+    def set_currency(self):
+        """Sets the currency for current session. A change in the currency
+        should reset the cart if the currency of the cart is not the same as
+        the one here
+        """
+        cart_obj = self.pool.get('nereid.cart')
+
+        rv = super(Website, self).set_currency()
+
+        # If currency has changed drop the cart
+        # This behaviour needs serious improvement. Probably create a new cart
+        # with all items in this cart and then drop this one
+        cart = cart_obj.open_cart()
+        if cart.sale and cart.sale.currency.id != session['currency']:
+            cart_obj.clear_cart()
+
+        return rv
+
+Website()
