@@ -106,8 +106,11 @@ class Cart(ModelSQL):
         else:
             # The Cart already exists
             # Ensure that the sale order in the cart if any is a draft
+            # and has the same currency
             cart = self.browse(ids[0])
-            if cart.sale and cart.sale.state != 'draft':
+            if cart.sale and (
+                    cart.sale.state != 'draft' or \
+                    cart.sale.currency.id != request.nereid_currency.id):
                 self.write(cart.id, {'sale': False})
             if create_order and not cart.sale:
                 self.write(cart.id, {'sale': self.create_draft_sale()})
