@@ -139,6 +139,7 @@ class Cart(ModelSQL):
             'company': site.company.id,
             'is_cart': True,
             'state': 'draft',
+            'website': site.id
                 }
         return sale_obj.create(sale_values)
 

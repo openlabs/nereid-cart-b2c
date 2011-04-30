@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <tryton>
-  <data>    
+  <data>
        
     <record model="ir.action.act_window" id="act_sale_form_draft">
       <field name="name">Draft Sales</field>
