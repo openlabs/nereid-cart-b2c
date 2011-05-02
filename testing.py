@@ -80,6 +80,10 @@ def create_coa_minimal(obj, company=None):
             }
         }, 'create_account')
     # Stage 3
+    revenue, = account_obj.search([
+        ('kind', '=', 'revenue'),
+        ('company', '=', company),
+        ], limit=1)
     receivable, = account_obj.search([
         ('kind', '=', 'receivable'),
         ('company', '=', company),
@@ -92,6 +96,7 @@ def create_coa_minimal(obj, company=None):
         'form': {
             'account_receivable': receivable,
             'account_payable': payable,
+            'account_revenue': revenue,
             'company': company,
             }
         }, 'create_properties')

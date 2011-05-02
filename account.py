@@ -61,7 +61,7 @@ class Account(ModelSQL, ModelPagination):
             limit=5)
         shipments = shipment_obj.browse(shipment_ids)
 
-        context = super(Website, self).account_context()
+        context = super(Account, self).account_context()
         context.update({
             'sales': sales,
             'invoices': invoices,
