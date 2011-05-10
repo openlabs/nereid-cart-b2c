@@ -207,8 +207,7 @@ Create Templates::
 Create category::
 
     >>> ProductCategory = Model.get('product.category')
-    >>> category = ProductCategory(name='Category', 
-    ...     nereid_template=category_template)
+    >>> category = ProductCategory(name='Category')
     >>> category.save()
 
 Create product::
@@ -229,7 +228,6 @@ Create product::
     >>> product.account_revenue = revenue
     >>> product.account_journal_stock_input = stock_journal
     >>> product.account_journal_stock_output = stock_journal
-    >>> product.nereid_template = product_template
     >>> product.save()
 
 Setup Site::
@@ -338,7 +336,6 @@ Create a new product::
     >>> product2.account_revenue = revenue
     >>> product2.account_journal_stock_input = stock_journal
     >>> product2.account_journal_stock_output = stock_journal
-    >>> product2.nereid_template = product_template
     >>> product2.save()
 
 Add both products to the cart and verify::
