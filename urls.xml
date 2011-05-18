@@ -3,21 +3,21 @@
     <data noupdate="1">
     
         <record id="view_cart" model="nereid.url_rule">
-            <field name="rule">/cart</field>
+            <field name="rule">/&lt;language&gt;/cart</field>
             <field name="endpoint">nereid.cart.view_cart</field>
             <field name="sequence" eval="100" />
             <field name="url_map" ref="nereid.default_url_map" />
         </record>
 
         <record id="clear_cart" model="nereid.url_rule">
-            <field name="rule">/cart/clear</field>
+            <field name="rule">/&lt;language&gt;/cart/clear</field>
             <field name="endpoint">nereid.cart.clear_cart</field>
             <field name="sequence" eval="120" />
             <field name="url_map" ref="nereid.default_url_map" />
         </record>
 
         <record id="add_to_cart" model="nereid.url_rule">
-            <field name="rule">/cart/add</field>
+            <field name="rule">/&lt;language&gt;/cart/add</field>
             <field name="endpoint">nereid.cart.add_to_cart</field>
             <field name="sequence" eval="140" />
             <field name="methods">("POST",)</field>
@@ -25,49 +25,49 @@
         </record>          
 
         <record id="delete_from_cart" model="nereid.url_rule">
-            <field name="rule">/cart/delete/&lt;int:line&gt;</field>
+            <field name="rule">/&lt;language&gt;/cart/delete/&lt;int:line&gt;</field>
             <field name="endpoint">nereid.cart.delete_from_cart</field>
             <field name="sequence" eval="160" />
             <field name="url_map" ref="nereid.default_url_map" />
         </record>
 
         <record id="sales" model="nereid.url_rule">
-            <field name="rule">/sales</field>
+            <field name="rule">/&lt;language&gt;/sales</field>
             <field name="endpoint">nereid.website.sales</field>
             <field name="sequence" eval="170" />
             <field name="url_map" ref="nereid.default_url_map" />
         </record>
 
         <record id="sale" model="nereid.url_rule">
-            <field name="rule">/sale/&lt;int:sale&gt;</field>
+            <field name="rule">/&lt;language&gt;/sale/&lt;int:sale&gt;</field>
             <field name="endpoint">nereid.website.sale</field>
             <field name="sequence" eval="180" />
             <field name="url_map" ref="nereid.default_url_map" />
         </record>
 
         <record id="invoices" model="nereid.url_rule">
-            <field name="rule">/invoices</field>
+            <field name="rule">/&lt;language&gt;/invoices</field>
             <field name="endpoint">nereid.website.invoices</field>
             <field name="sequence" eval="190" />
             <field name="url_map" ref="nereid.default_url_map" />
         </record>
 
         <record id="invoice" model="nereid.url_rule">
-            <field name="rule">/invoice/&lt;int:invoice&gt;</field>
+            <field name="rule">/&lt;language&gt;/invoice/&lt;int:invoice&gt;</field>
             <field name="endpoint">nereid.website.invoice</field>
             <field name="sequence" eval="200" />
             <field name="url_map" ref="nereid.default_url_map" />
         </record>
 
         <record id="shipments" model="nereid.url_rule">
-            <field name="rule">/shipments</field>
+            <field name="rule">/&lt;language&gt;/shipments</field>
             <field name="endpoint">nereid.website.shipments</field>
             <field name="sequence" eval="210" />
             <field name="url_map" ref="nereid.default_url_map" />
         </record>
 
         <record id="shipment" model="nereid.url_rule">
-            <field name="rule">/shipment/&lt;int:shipment&gt;</field>
+            <field name="rule">/&lt;language&gt;/shipment/&lt;int:shipment&gt;</field>
             <field name="endpoint">nereid.website.shipment</field>
             <field name="sequence" eval="220" />
             <field name="url_map" ref="nereid.default_url_map" />
