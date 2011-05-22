@@ -14,7 +14,6 @@ from nereid.globals import session, request, current_app
 from werkzeug import redirect
 
 from trytond.model import ModelSQL, ModelView, fields
-from trytond.transaction import Transaction
 
 from .forms import AddtoCartForm
 
@@ -237,7 +236,10 @@ class Cart(ModelSQL):
         This function is registered with nereid.template.context_processor
         in xml code
         """
-        return {'get_cart_size': self.cart_size}
+        return {
+            'get_cart_size': self.cart_size,
+            'get_cart': self.open_cart,
+            }
 
 Cart()
 
