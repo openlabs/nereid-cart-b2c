@@ -9,6 +9,13 @@
             <field name="url_map" ref="nereid.default_url_map" />
         </record>
 
+        <record id="view_cart_esi" model="nereid.url_rule">
+            <field name="rule">/&lt;language&gt;/esi/cart</field>
+            <field name="endpoint">nereid.cart.view_cart_esi</field>
+            <field name="sequence" eval="110" />
+            <field name="url_map" ref="nereid.default_url_map" />
+        </record>
+
         <record id="clear_cart" model="nereid.url_rule">
             <field name="rule">/&lt;language&gt;/cart/clear</field>
             <field name="endpoint">nereid.cart.clear_cart</field>

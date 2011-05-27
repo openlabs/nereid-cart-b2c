@@ -56,7 +56,19 @@ class Cart(ModelSQL):
         the checkout method has been moved to nereid.checkout.x
         """
         cart = self.open_cart()
-        return render_template('shopping-cart.jinja', cart=cart)
+        return current_app.response_class(
+            render_template('shopping-cart.jinja', cart=cart), 
+            headers=[('Cache-Control', 'max-age=0')])
+
+    def view_cart_esi(self):
+        """Returns a view of the shopping cart 
+
+        Similar to :meth:view_cart but for ESI
+        """
+        cart = self.open_cart()
+        return current_app.response_class(
+            render_template('shopping-cart-esi.jinja', cart=cart), 
+            headers=[('Cache-Control', 'max-age=0')])
 
     def clear_cart(self):
         """
