@@ -287,8 +287,10 @@ class Website(ModelSQL, ModelView):
         rv = super(Website, self)._user_status()
 
         rv['cart_size'] = '%s' % cart_obj.cart_size()
-        rv['cart_total_amount'] = '%.2f' % (
-            cart.sale.total_amount if cart.sale else Decimal('0.0'))
+        rv['cart_total_amount'] = '%s %.2f' % (
+            (cart.sale.currency.symbol, cart.sale.total_amount) if cart.sale \
+            else (request.nereid_currency.symbol, Decimal('0.0'))
+            )
 
         return rv
 
