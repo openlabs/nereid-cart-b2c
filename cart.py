@@ -288,7 +288,7 @@ class Website(ModelSQL, ModelView):
 
         rv['cart_size'] = cart_obj.cart_size()
         rv['cart_total_amount'] = cart.sale.total_amount \
-            if cart.sale else cart.sale.total_amount
+            if cart.sale else Decimal('0.0')
 
         return rv
 
