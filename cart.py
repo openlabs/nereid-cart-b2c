@@ -278,4 +278,18 @@ class Website(ModelSQL, ModelView):
 
         return rv
 
+    def _user_status(self):
+        """Add cart size and amount to the dictionary
+        """
+        cart_obj = self.pool.get('nereid.cart')
+        cart = cart_obj.open_cart()
+
+        rv = super(Website, self)._uri_status()
+
+        rv['cart_size'] = cart_obj.cart_size()
+        rv['cart_total_amount'] = cart.sale.total_amount \
+            if cart.sale else cart.sale.total_amount
+
+        return rv
+
 Website()
