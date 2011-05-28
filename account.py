@@ -68,6 +68,16 @@ class Account(ModelSQL, ModelPagination):
             'shipments': shipments,
             })
         return context
+        
+    @login_required
+    def account(self):
+        'Account Details'
+        sales = self.account_context.get('sales')
+        invoices = self.account_context.get('invoices')
+        shipments = self.account_context.get('shipments')
+        return render_template('account.jinja', sales = sales,
+            invoices = invoices, shipments = shipments, 
+            user = request.nereid_user)
 
     @login_required
     def sales(self, page=1):

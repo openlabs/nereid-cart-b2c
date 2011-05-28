@@ -38,6 +38,13 @@
             <field name="url_map" ref="nereid.default_url_map" />
         </record>
 
+        <record id="account" model="nereid.url_rule">
+            <field name="rule">/&lt;language&gt;/account</field>
+            <field name="endpoint">nereid.website.account</field>
+            <field name="sequence" eval="165" />
+            <field name="url_map" ref="nereid.default_url_map" />
+        </record>
+
         <record id="sales" model="nereid.url_rule">
             <field name="rule">/&lt;language&gt;/sales</field>
             <field name="endpoint">nereid.website.sales</field>

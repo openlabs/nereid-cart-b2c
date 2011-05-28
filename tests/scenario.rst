@@ -198,7 +198,7 @@ Create Templates::
     ...     name='category-list.jinja', language=english,
     ...     source=' ')
     >>> category_list_template.save()
-    >>> for template in ('sales', 'sale', 'invoice', 'invoices', 'shipment', 'shipments'):
+    >>> for template in ('account', 'sales', 'sale', 'invoice', 'invoices', 'shipment', 'shipments'):
     ...     account_template = Template(
     ...         name='%s.jinja' % template, language=english,
     ...         source=' ')
