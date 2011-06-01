@@ -86,46 +86,88 @@ class Cart(ModelSQL):
 
     def open_cart(self, create_order=False):
         """
-        :param create_order: Create a sale order and attach 
+        :param create_order: If `True` Create a sale order and attach 
             if one does not already exist.
+        :return: The browse record for the shopping cart of the user
 
-        Returns the browse record for the shopping cart of the user
-        Creates one if it doesn't exist
         The method is guaranteed to return a cart but the cart may not have 
-            a sale order. For methods like add to cart which definitely need 
-            a sale order pass 
-        :attr: create_order = True so that an order is 
-            also assured.
+        a sale order. For methods like add to cart which definitely need a sale
+        order pass :attr: create_order = True so that an order is also assured.
         """
-        if request.is_guest_user:
-            ids = self.search([('sessionid', '=', session.sid)], limit=1)
-        else:
-            ids = self.search([('user', '=', session['user'])], limit=1)
+        # Search for a perfect match (ie. both session and user)
+        ids = self.search([
+            ('sessionid', '=', session.sid),
+            ('user', '=', session.get('user', False))
+            ], limit=1)
+
+        if not request.is_guest_user and not ids:
+            # If registered user and no perfect match, then try to see if there
+            # is a previously owned cart by the user
+            ids = self.search([('user', '=', session['user'])])
+
+            # If still there is no match, then try to see if there is a cart 
+            # from the guest user in this session 
+            # (probably the user browsed the site and built his cart a a guest, 
+            # but just logged in) 
+            # In that case it makes more sense to retain his guest cart.
+            ids = self.search([
+                ('sessionid', '=', session.sid),
+                ('user', '=', False)
+                ], limit=1) if not ids else ids
 
         if not ids:
-            # There is no cart, so create one, if create_order
-            # is true then create sale order else leave sale False
-            sale = False
-            if create_order == True:
-                sale = self.create_draft_sale()
+            # Create a cart since it definitely does not exists
             cart_id = self.create({
                 'user': session.get('user', False),
                 'sessionid': session.sid,
-                'sale': sale,
+                'sale': self.create_draft_sale() if create_order else False,
             })
             cart = self.browse(cart_id)
         else:
             # The Cart already exists
-            # Ensure that the sale order in the cart if any is a draft
-            # and has the same currency
             cart = self.browse(ids[0])
+
+            # Ensure that the state and currency of order are valid
             if cart.sale and (
                     cart.sale.state != 'draft' or \
                     cart.sale.currency.id != request.nereid_currency.id):
                 self.write(cart.id, {'sale': False})
-            if create_order and not cart.sale:
-                self.write(cart.id, {'sale': self.create_draft_sale()})
+
+            # If a guest cart was decided to be used since there was no exact
+            # match, then the cart and the order needs to be owned by the new
+            # registered user
+            if not request.is_guest_user and not cart.user:
+                self.transfer_ownership(cart)
+
+        # If the cart does not have a sale and is still required
+        if create_order and not cart.sale:
+            self.write(cart.id, {'sale': self.create_draft_sale()})
+
         return cart
+
+    def transfer_ownership(self, cart, owner=None):
+        """Transfer the ownership of the cart and sale if any to the new owner
+
+        :param cart: Browse Record of the cart
+        :param owner: Browse Record of party.address (of current user). If 
+            owner is None, ownership is transferred to current user
+        """
+        sale_obj = self.pool.get('sale.sale')
+
+        assert not request.is_guest_user, "Cannot transfer cart to guest user"
+        if owner is None:
+            owner = request.nereid_user
+
+        self.write(cart.id, {'user': owner})
+
+        if cart.sale:
+            sale_obj.write(cart.sale.id, {'party': owner.party.id})
+            # TODO: Evaluate the situation where the party has a different
+            # pricelist from the guest pricelist. Then it might be better to 
+            # call create_draft_sale to create a new order and then move lines
+            # to the new order.
+
+        return True
 
     def create_draft_sale(self):
         sale_obj = self.pool.get('sale.sale')
