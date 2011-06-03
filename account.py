@@ -9,11 +9,11 @@
 '''
 from werkzeug.exceptions import NotFound
 from nereid import render_template, login_required, request
-from nereid.backend import ModelPagination
-
+from nereid.helpers import Pagination
 from trytond.model import ModelSQL
 
-class Account(ModelSQL, ModelPagination):
+
+class Account(ModelSQL):
     """When the account page is displayed it may be required to display a lot of
         information. and this depends from site to site. So rather than 
         rewriting the render page everytime it is optimal to have a context 
@@ -26,10 +26,10 @@ class Account(ModelSQL, ModelPagination):
         to get the result of this method and then add your content to it.
     """
     _name = 'nereid.website'
-    
+
     def __init__(self):
         super(Account, self).__init__()
-        self.per_page = 9
+        self.per_page = 10
 
     def account_context(self):
         "First get existing context and then add"
@@ -37,29 +37,20 @@ class Account(ModelSQL, ModelPagination):
         invoice_obj = self.pool.get('account.invoice')
         shipment_obj = self.pool.get('stock.shipment.out')
 
-        sales_ids = sale_obj.search(
-            [
+        sales = Pagination(sale_obj, [
             ('party', '=', request.nereid_user.party.id),
             ('state', '!=', 'draft')
-            ],
-            limit=5)
-        sales = sale_obj.browse(sales_ids)
+            ], 1, 5)
 
-        invoice_ids = invoice_obj.search(
-            [
+        invoices = Pagination(invoice_obj, [
             ('party', '=', request.nereid_user.party.id),
             ('state', '!=', 'draft'),
-            ],
-            limit=5)
-        invoices = invoice_obj.browse(invoice_ids)
+            ], 1, 5)
 
-        shipment_ids = shipment_obj.search(
-            [
+        shipments = Pagination(shipment_obj, [
             ('customer', '=', request.nereid_user.party.id),
             ('state', '!=', 'draft'),
-            ],
-            limit=5)
-        shipments = shipment_obj.browse(shipment_ids)
+            ], 1, 5)
 
         context = super(Account, self).account_context()
         context.update({
@@ -68,7 +59,7 @@ class Account(ModelSQL, ModelPagination):
             'shipments': shipments,
             })
         return context
-        
+
     @login_required
     def account(self):
         'Account Details'
@@ -83,12 +74,10 @@ class Account(ModelSQL, ModelPagination):
     def sales(self, page=1):
         'All sales'
         sale_obj = self.pool.get('sale.sale')
-        sales_ids = sale_obj.paginate(
-            [
+        sales = Pagination(sale_obj, [
             ('party', '=', request.nereid_user.party.id),
             ('state', '!=', 'draft')
             ], page, self.per_page)
-        sales = sale_obj.browse(sales_ids)
         return render_template('sales.jinja', sales=sales)
 
     @login_required
@@ -109,12 +98,10 @@ class Account(ModelSQL, ModelPagination):
     def invoices(self, page=1):
         'List of Invoices'
         invoice_obj = self.pool.get('account.invoice')
-        invoice_ids = invoice_obj.paginate(
-            [
+        invoices = Pagination(invoice_obj, [
             ('party', '=', request.nereid_user.party.id),
             ('state', '!=', 'draft')
             ], page, self.per_page)
-        invoices = invoice_obj.browse(invoice_ids)
         return render_template('invoices.jinja', invoices=invoices)
 
     @login_required
@@ -136,12 +123,10 @@ class Account(ModelSQL, ModelPagination):
     def shipments(self, page=1):
         'List of Shipments'
         shipment_obj = self.pool.get('stock.shipment.out')
-        shipment_ids = shipment_obj.paginate(
-            [
+        shipments = Pagination(shipment_obj, [
             ('customer', '=', request.nereid_user.party.id),
             ('state', '!=', 'draft'),
             ], page, self.per_page)
-        shipments = shipment_obj.browse(shipment_ids)
         return render_template('shipments.jinja', shipments=shipments)
 
     @login_required
