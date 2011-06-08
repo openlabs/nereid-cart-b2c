@@ -110,7 +110,7 @@ Create parties::
     >>> Party = Model.get('party.party')
     >>> Address = Model.get('party.address')
     >>> ContactMechanism = Model.get('party.contact_mechanism')
-    >>> customer = Party(name='Customer')
+    >>> customer = Party(name='Customer', company=company)
     >>> customer.save() 
     >>> email = ContactMechanism(type='email', value='user@example.com', 
     ...     party=customer)
@@ -124,7 +124,7 @@ Create Guest User::
     >>> Party = Model.get('party.party')
     >>> Address = Model.get('party.address')
     >>> ContactMechanism = Model.get('party.contact_mechanism')
-    >>> guest = Party(name='Guest')
+    >>> guest = Party(name='Guest', company=company)
     >>> guest.save() 
     >>> email = ContactMechanism(type='email', value='guest@example.com', 
     ...     party=guest)
@@ -233,11 +233,17 @@ Create product::
 Setup Site::
 
     >>> Country = Model.get('country.country')
+    >>> Currency = Model.get('currency.currency')
+    >>> Rate = Model.get('currency.currency.rate')
+    >>> currencies = Currency.find([('code', '=', 'USD')])
+    >>> rate = Rate(currency=currencies[0], rate=Decimal('1.0'))
+    >>> rate.save()
     >>> countries = [c.id for c in Country.find([('code', 'in', ('IN', 'US'))])]
     >>> site = NereidSite(name='Test Site', 
     ...     url_map=url_map, company=company.id, countries=countries,
-    ...     product_template=product_list_template,
-    ...     category_template=category_list_template)
+    ...     product_template=product_list_template, currencies=currencies,
+    ...     category_template=category_list_template,
+    ...     default_language = english)
     >>> site.save()
 
 Load the WSGI App::
@@ -557,7 +563,7 @@ Test Clearing of cart::
 
 Create another party::
 
-    >>> customer2 = Party(name='Customer2')
+    >>> customer2 = Party(name='Customer2', company=company)
     >>> customer2.save() 
     >>> email2 = ContactMechanism(type='email', value='user@example2.com', 
     ...     party=customer2)
@@ -569,15 +575,15 @@ Create another party::
 Now try to fetch cart for both the customers::
 
     >>> with app.test_client() as client:
-    ...     client.post('/en_US/en_US/login', 
+    ...     client.post('/en_US/login', 
     ...         data=dict(email='user@example.com', password='password'))
-    ...     client.get('/en_US/en_US/cart')
+    ...     client.get('/en_US/cart')
     <Response streamed [302 FOUND]>
     <Response streamed [200 OK]>
     >>> with app.test_client() as client:
-    ...     client.post('/en_US/en_US/login', 
+    ...     client.post('/en_US/login', 
     ...         data=dict(email='user@example2.com', password='password'))
-    ...     client.get('/en_US/en_US/cart')
+    ...     client.get('/en_US/cart')
     <Response streamed [302 FOUND]>
     <Response streamed [200 OK]>
     >>> Sale = Model.get('sale.sale')
