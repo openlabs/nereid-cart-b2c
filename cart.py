@@ -137,6 +137,9 @@ class Cart(ModelSQL):
 
         cart = self.browse(ids[0])
 
+        if cart.sale:
+            self.sanitise_state(cart, user)
+
         # Check if the order needs to be created
         if create_order and not cart.sale:
             # Try any abandoned carts that may exist if user is registered
@@ -144,7 +147,8 @@ class Cart(ModelSQL):
                 ('state', '=', 'draft'),
                 ('is_cart', '=', True),
                 ('website', '=', request.nereid_website.id),
-                ('party', '=', user.party.id)
+                ('party', '=', user.party.id),
+                ('currency', '=', request.nereid_currency.id)
                 ], limit=1) if 'user' in session else None
             self.write(cart.id, {
                 'sale': sale_ids[0] if sale_ids \
@@ -152,6 +156,21 @@ class Cart(ModelSQL):
                 })
 
         return self.browse(ids[0])
+
+    def sanitise_state(self, cart, user):
+        """This method verifies that the sale order in the cart is a valid one
+        1. for example must not be in any other state than draft
+        2. must be of the current currency
+        3. must be owned by the given user
+
+        :param cart: browse node of the cart
+        :param user: browse record of the user
+        """
+        if cart.sale: 
+            if cart.sale.state != 'draft' or \
+                cart.sale.currency != request.nereid_currency or \
+                cart.sale.party != user.party:
+                self.write(cart.id, {'sale': False})
 
     def create_draft_sale(self, user):
         """A helper for the cart which creates a draft order for the given 
