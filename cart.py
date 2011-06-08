@@ -361,16 +361,12 @@ def login_event_handler(website_obj):
 
     # There is a cart
     guest_cart = cart_obj.browse(ids[0])
-    if not guest_cart.sale:
-        return
-    if not guest_cart.sale.lines:
-        return
-
-    to_cart = cart_obj.open_cart(True)
-    # Transfer lines from one cart to another
-    for from_line in guest_cart.sale.lines:
-        cart_obj._add_or_update(
-            to_cart.sale, from_line.product.id, from_line.quantity)
+    if guest_cart.sale and guest_cart.sale.lines:
+        to_cart = cart_obj.open_cart(True)
+        # Transfer lines from one cart to another
+        for from_line in guest_cart.sale.lines:
+            cart_obj._add_or_update(
+                to_cart.sale, from_line.product.id, from_line.quantity)
 
     # Clear and delete the old cart
     cart_obj._clear_cart(guest_cart)
