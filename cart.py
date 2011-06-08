@@ -112,12 +112,14 @@ class Cart(ModelSQL):
         if 'user' in session:
             ids = self.search([
                 ('sessionid', '=', False),
-                ('user', '=', user_id)
+                ('user', '=', user_id),
+                ('website', '=', request.nereid_website.id)
             ])
         else:
             ids = self.search([
                 ('sessionid', '=', session.sid),
-                ('user', '=', user_id)
+                ('user', '=', user_id),
+                ('website', '=', request.nereid_website.id)
                 ], limit=1)
 
 
@@ -125,6 +127,7 @@ class Cart(ModelSQL):
             # Create a cart since it definitely does not exists
             ids = [self.create({
                 'user': user_id,
+                'website': request.nereid_website.id,
                 'sessionid': session.sid if 'user' not in session else False,
             })]
 
