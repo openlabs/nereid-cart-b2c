@@ -101,24 +101,28 @@ class Cart(ModelSQL):
         a sale order. For methods like add to cart which definitely need a sale
         order pass :attr: create_order = True so that an order is also assured.
         """
+        sale_obj = self.pool.get('sale.sale')
+        party_address_obj = self.pool.get('party.address')
+
         # request.nereid_user is not used here this method is used by the 
         # signal handlers immediately after a user logs in (but before being 
         # redirected). This causes the cached property of nereid_user to remain
         # in old value through out the request, which will not  have ended when
         # this method is called.
-        user_id = session.get('user', current_app.guest_user)
+        user = party_address_obj.browse(
+            session.get('user', current_app.guest_user))
 
         # for a registered user there is only one cart, session is immaterial
         if 'user' in session:
             ids = self.search([
                 ('sessionid', '=', False),
-                ('user', '=', user_id),
+                ('user', '=', user.id),
                 ('website', '=', request.nereid_website.id)
             ])
         else:
             ids = self.search([
                 ('sessionid', '=', session.sid),
-                ('user', '=', user_id),
+                ('user', '=', user.id),
                 ('website', '=', request.nereid_website.id)
                 ], limit=1)
 
@@ -126,7 +130,7 @@ class Cart(ModelSQL):
         if not ids:
             # Create a cart since it definitely does not exists
             ids = [self.create({
-                'user': user_id,
+                'user': user.id,
                 'website': request.nereid_website.id,
                 'sessionid': session.sid if 'user' not in session else False,
             })]
@@ -135,43 +139,29 @@ class Cart(ModelSQL):
 
         # Check if the order needs to be created
         if create_order and not cart.sale:
-            self.write(cart.id, {'sale': self.create_draft_sale(user_id)})
+            # Try any abandoned carts that may exist
+            sale_ids = sale_obj.search([
+                ('state', '=', 'draft'),
+                ('is_cart', '=', True),
+                ('website', '=', request.nereid_website.id),
+                ('party', '=', user.party.id)
+                ], limit=1)
+            self.write(cart.id, {
+                'sale': ids[0] if ids else self.create_draft_sale(user)
+                })
 
         return self.browse(ids[0])
 
-    def transfer_ownership(self, cart, owner=None):
-        """Transfer the ownership of the cart and sale if any to the new owner
-
-        :param cart: Browse Record of the cart
-        :param owner: Browse Record of party.address (of current user). If 
-            owner is None, ownership is transferred to current user
-        """
-        sale_obj = self.pool.get('sale.sale')
-
-        assert not request.is_guest_user, "Cannot transfer cart to guest user"
-        if owner is None:
-            owner = request.nereid_user
-
-        self.write(cart.id, {'user': owner})
-
-        if cart.sale:
-            sale_obj.write(cart.sale.id, {'party': owner.party.id})
-            # TODO: Evaluate the situation where the party has a different
-            # pricelist from the guest pricelist. Then it might be better to 
-            # call create_draft_sale to create a new order and then move lines
-            # to the new order.
-
-        return True
-
-    def create_draft_sale(self, user_id):
+    def create_draft_sale(self, user):
         """A helper for the cart which creates a draft order for the given 
         user.
+
+        :param user: Browse Record of the user
         """
         sale_obj = self.pool.get('sale.sale')
         party_address_obj = self.pool.get('party.address')
 
         site = request.nereid_website
-        user = party_address_obj.browse(user_id)
         guest_user = party_address_obj.browse(current_app.guest_user)
 
         # Get the pricelist of active user, may be regd or guest
