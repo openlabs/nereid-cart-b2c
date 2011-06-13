@@ -225,29 +225,31 @@ class Cart(ModelSQL):
         if request.method == 'POST' and form.validate():
             cart = self.open_cart(create_order=True)
             self._add_or_update(
-                cart.sale, form.product.data, form.quantity.data)
+                cart.sale.id, form.product.data, form.quantity.data)
             flash('The order has been successfully updated')
             if request.is_xhr:
                 return jsonify(message='OK')
 
         return redirect(url_for('nereid.cart.view_cart'))
 
-    def _add_or_update(self, sale, product, quantity):
+    def _add_or_update(self, sale_id, product_id, quantity):
         '''Add item as a line or if a line with item exists
         update it for the quantity
 
-        :param sale: Browse Record of sale
+        :param sale: ID of sale
         :param product: ID of the product
         :param quantity: Quantity
         '''
         sale_line_obj = self.pool.get('sale.line')
+        sale_obj = self.pool.get('sale.sale')
 
+        sale = sale_obj.browse(sale_id)
         ids = sale_line_obj.search([
-            ('sale', '=', sale.id), ('product', '=', product)])
+            ('sale', '=', sale.id), ('product', '=', product_id)])
         if ids:
             order_line = sale_line_obj.browse(ids[0])
             values = {
-                'product': product,
+                'product': product_id,
                 '_parent_sale.currency': sale.currency.id,
                 '_parent_sale.party': sale.party.id,
                 '_parent_sale.price_list': sale.price_list.id,
@@ -259,7 +261,7 @@ class Cart(ModelSQL):
             return sale_line_obj.write(order_line.id, values)
         else:
             values = {
-                'product': product,
+                'product': product_id,
                 '_parent_sale.currency': sale.currency.id,
                 '_parent_sale.party': sale.party.id,
                 '_parent_sale.price_list': sale.price_list.id,
@@ -376,7 +378,7 @@ def login_event_handler(website_obj):
         # Transfer lines from one cart to another
         for from_line in guest_cart.sale.lines:
             cart_obj._add_or_update(
-                to_cart.sale, from_line.product.id, from_line.quantity)
+                to_cart.sale.id, from_line.product.id, from_line.quantity)
 
     # Clear and delete the old cart
     cart_obj._clear_cart(guest_cart)
