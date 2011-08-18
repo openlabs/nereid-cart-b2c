@@ -26,8 +26,8 @@ class Cart(ModelSQL):
     and the creation of a Sale Order in the backend.
 
     A Draft Sale Order is maintained through out the process of the existance
-    of a cart which is finally converted into a confirmed sale order once 
-    the process is complete. 
+    of a cart which is finally converted into a confirmed sale order once
+    the process is complete.
     """
     _name = 'nereid.cart'
     _description = 'Shopping Cart'
@@ -59,17 +59,17 @@ class Cart(ModelSQL):
         """
         cart = self.open_cart()
         return current_app.response_class(
-            render_template('shopping-cart.jinja', cart=cart), 
+            render_template('shopping-cart.jinja', cart=cart),
             headers=[('Cache-Control', 'max-age=0')])
 
     def view_cart_esi(self):
-        """Returns a view of the shopping cart 
+        """Returns a view of the shopping cart
 
         Similar to :meth:view_cart but for ESI
         """
         cart = self.open_cart()
         return current_app.response_class(
-            render_template('shopping-cart-esi.jinja', cart=cart), 
+            render_template('shopping-cart-esi.jinja', cart=cart),
             headers=[('Cache-Control', 'max-age=0')])
 
     def _clear_cart(self, cart):
@@ -89,15 +89,15 @@ class Cart(ModelSQL):
         return redirect(url_for('nereid.cart.view_cart'))
 
     def open_cart(self, create_order=False):
-        """Logic of this cart functionality is inspired by amazon. Most 
-        e-commerce systems handle cart in a different way and it is important 
+        """Logic of this cart functionality is inspired by amazon. Most
+        e-commerce systems handle cart in a different way and it is important
         to know how the cart behaves under different circumstances.
 
-        :param create_order: If `True` Create a sale order and attach 
+        :param create_order: If `True` Create a sale order and attach
             if one does not already exist.
         :return: The browse record for the shopping cart of the user
 
-        The method is guaranteed to return a cart but the cart may not have 
+        The method is guaranteed to return a cart but the cart may not have
         a sale order. For methods like add to cart which definitely need a sale
         order pass :attr: create_order = True so that an order is also assured.
         """
@@ -166,14 +166,14 @@ class Cart(ModelSQL):
         :param cart: browse node of the cart
         :param user: browse record of the user
         """
-        if cart.sale: 
+        if cart.sale:
             if cart.sale.state != 'draft' or \
                 cart.sale.currency != request.nereid_currency or \
                 cart.sale.party != user.party:
                 self.write(cart.id, {'sale': False})
 
     def create_draft_sale(self, user):
-        """A helper for the cart which creates a draft order for the given 
+        """A helper for the cart which creates a draft order for the given
         user.
 
         :param user: Browse Record of the user
@@ -352,6 +352,7 @@ class Website(ModelSQL, ModelView):
         return rv
 
 Website()
+
 
 @login.connect
 def login_event_handler(website_obj):
