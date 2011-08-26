@@ -63,10 +63,12 @@ class Account(ModelSQL):
     @login_required
     def account(self):
         'Account Details'
-        sales = self.account_context.get('sales')
-        invoices = self.account_context.get('invoices')
-        shipments = self.account_context.get('shipments')
-        return render_template('account.jinja', sales = sales,
+        account_context = self.account_context()
+        sales = account_context.get('sales')
+        invoices = account_context.get('invoices')
+        shipments = account_context.get('shipments')
+        return render_template(
+            'account.jinja', sales = sales,
             invoices = invoices, shipments = shipments, 
             user = request.nereid_user)
 
