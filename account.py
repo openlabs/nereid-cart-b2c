@@ -7,6 +7,8 @@
     :copyright: (c) 2010-2011 by Openlabs Technologies & Consulting (P) LTD
     :license: GPLv3, see LICENSE for more details
 '''
+import warnings
+
 from werkzeug.exceptions import NotFound
 from nereid import render_template, login_required, request
 from nereid.helpers import Pagination
@@ -85,6 +87,11 @@ class Account(ModelSQL):
     @login_required
     def sale(self, sale):
         'Individual Sale Order'
+        warnings.warn(
+            "This method call will be deprecated in future."
+            "Use `sale.sale.render` instead", 
+            DeprecationWarning
+            )
         sale_obj = self.pool.get('sale.sale')
         sales_ids = sale_obj.search(
             [
