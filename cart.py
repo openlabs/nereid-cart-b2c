@@ -8,11 +8,15 @@
     :license: GPLv3, see LICENSE for more details
 '''
 from decimal import Decimal
+from functools import partial
+
 from nereid import jsonify, render_template, flash
 from nereid.helpers import login_required, url_for
 from nereid.globals import session, request, current_app
 from nereid.signals import login
 from werkzeug import redirect
+from babel import numbers
+
 
 from trytond.model import ModelSQL, ModelView, fields
 
@@ -56,8 +60,39 @@ class Cart(ModelSQL):
 
         This method only handles GET. Unlike previous versions
         the checkout method has been moved to nereid.checkout.x
+
+        For XHTTP/Ajax Requests a JSON object with order and lines information
+        which should be sufficient to show order information is returnes. T
         """
         cart = self.open_cart()
+
+        if request.is_xhr:
+            if not cart.sale:
+                # Dont try to build further if the cart is empty
+                return jsonify({'empty': True})
+
+            # Build locale formatters
+            currency_format = partial(
+                numbers.format_currency, currency=cart.sale.currency.code,
+                locale=request.nereid_language.code
+            )
+            number_format = partial(
+                numbers.format_number, locale=request.nereid_language.code
+            )
+            return jsonify(cart={
+                'lines': [{
+                    'product': l.product.name,
+                    'quantity': number_format(l.quantity),
+                    'unit': l.unit.symbol,
+                    'unit_price': currency_format(l.unit_price),
+                    'amount': currency_format(l.amount),
+                } for l in cart.sale.lines],
+                'empty': len(cart.sale.lines) > 0,
+                'total_amount': currency_format(cart.sale.total_amount),
+                'tax_amount': currency_format(cart.sale.tax_amount),
+                'untaxed_amount': currency_format(cart.sale.untaxed_amount),
+            })
+
         return current_app.response_class(
             render_template('shopping-cart.jinja', cart=cart),
             headers=[('Cache-Control', 'max-age=0')])
