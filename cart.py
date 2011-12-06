@@ -387,11 +387,34 @@ class Website(ModelSQL, ModelView):
 
         rv = super(Website, self)._user_status()
 
-        rv['cart_size'] = '%s' % cart_obj.cart_size()
-        rv['cart_total_amount'] = '%s %.2f' % (
-            (cart.sale.currency.symbol, cart.sale.total_amount) if cart.sale \
-            else (request.nereid_currency.symbol, Decimal('0.0'))
+        if cart.sale:
+            # Build locale based formatters
+            currency_format = partial(
+                numbers.format_currency, currency=cart.sale.currency.code,
+                locale=request.nereid_language.code
             )
+            number_format = partial(
+                numbers.format_number, locale=request.nereid_language.code
+            )
+
+            rv['cart'] = {
+                'lines': [{
+                    'product': l.product.name,
+                    'quantity': number_format(l.quantity),
+                    'unit': l.unit.symbol,
+                    'unit_price': currency_format(l.unit_price),
+                    'amount': currency_format(l.amount),
+                } for l in cart.sale.lines],
+                'empty': len(cart.sale.lines) > 0,
+                'total_amount': currency_format(cart.sale.total_amount),
+                'tax_amount': currency_format(cart.sale.tax_amount),
+                'untaxed_amount': currency_format(cart.sale.untaxed_amount),
+            }
+            rv['cart_total_amount'] = currency_format(
+                cart.sale and cart.sale.total_amount or 0
+            )
+
+        rv['cart_size'] = '%s' % cart_obj.cart_size()
 
         return rv
 
