@@ -204,7 +204,7 @@ class Cart(ModelSQL):
             'company': site.company.id,
             'is_cart': True,
             'state': 'draft',
-            'website': site.id
+            'website': site.id,
                 }
         return sale_obj.create(sale_values)
 
@@ -216,6 +216,7 @@ class Cart(ModelSQL):
 
             quantity    : decimal
             product     : integer ID
+            action      : set (default), add
 
         Response:
             'OK' if X-HTTPRequest
@@ -224,21 +225,28 @@ class Cart(ModelSQL):
         form = AddtoCartForm(request.form)
         if request.method == 'POST' and form.validate():
             cart = self.open_cart(create_order=True)
+            action = request.values.get('action', 'set')
             self._add_or_update(
-                cart.sale.id, form.product.data, form.quantity.data)
-            flash('The order has been successfully updated')
+                cart.sale.id, form.product.data, form.quantity.data, action
+            )
+            if action == 'add':
+                flash('The product has been added to your cart', 'info')
+            else:
+                flash('Your cart has been updated with the product', 'info')
             if request.is_xhr:
                 return jsonify(message='OK')
 
         return redirect(url_for('nereid.cart.view_cart'))
 
-    def _add_or_update(self, sale_id, product_id, quantity):
+    def _add_or_update(self, sale_id, product_id, quantity, action='set'):
         '''Add item as a line or if a line with item exists
         update it for the quantity
 
         :param sale: ID of sale
         :param product: ID of the product
         :param quantity: Quantity
+        :param action: set - set the quantity to the given quantity
+                       add - add quantity to existing quantity
         '''
         sale_line_obj = self.pool.get('sale.line')
         sale_obj = self.pool.get('sale.sale')
@@ -254,7 +262,8 @@ class Cart(ModelSQL):
                 '_parent_sale.party': sale.party.id,
                 '_parent_sale.price_list': sale.price_list.id,
                 'unit': order_line.unit.id,
-                'quantity': quantity,
+                'quantity': quantity if action == 'set' \
+                        else quantity + order_line.quantity,
                 'type': 'line'
                 }
             values.update(sale_line_obj.on_change_quantity(values))
