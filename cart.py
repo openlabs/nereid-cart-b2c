@@ -37,10 +37,10 @@ class Cart(ModelSQL):
     _description = 'Shopping Cart'
     _rec_name = 'user'
 
-    user = fields.Many2One('party.address', 'Cart owner')
+    user = fields.Many2One('party.address', 'Cart owner', select=1)
     sale = fields.Many2One('sale.sale', 'Sale Order')
-    sessionid = fields.Char('Session ID')
-    website = fields.Many2One('nereid.website', 'Website')
+    sessionid = fields.Char('Session ID', select=1)
+    website = fields.Many2One('nereid.website', 'Website', select=1)
 
     def cart_size(self):
         "Returns the sum of quantities in the cart"
