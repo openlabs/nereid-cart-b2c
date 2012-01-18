@@ -446,7 +446,8 @@ def login_event_handler(website_obj):
     # Find the guest cart
     ids = cart_obj.search([
         ('sessionid', '=', session.sid),
-        ('user', '=', current_app.guest_user)
+        ('user', '=', current_app.guest_user),
+        ('website', '=', request.nereid_website.id)
         ], limit=1)
     if not ids:
         return
