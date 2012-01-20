@@ -217,7 +217,7 @@ class Cart(ModelSQL):
         sale_obj = self.pool.get('sale.sale')
         if cart.sale and cart.sale.sale_date \
             and cart.sale.sale_date < date_obj.today():
-            sale_obj.write(cart.sale.id, {'sale_date', '=', date_obj.today()})
+            sale_obj.write(cart.sale.id, {'sale_date': date_obj.today()})
 
     def create_draft_sale(self, user):
         """A helper for the cart which creates a draft order for the given
