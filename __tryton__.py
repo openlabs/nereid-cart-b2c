@@ -2,7 +2,7 @@
 #this repository contains the full copyright notices and license terms.
 {
     'name': 'Nereid : Shopping Cart B2C',
-    'version': '2.0.0.2',
+    'version': '2.0.0.3',
     'author': 'Openlabs Technologies & Consulting (P) Ltd.',
     'email': 'info@openlabs.co.in',
     'website': 'http://www.openlabs.co.in/',
