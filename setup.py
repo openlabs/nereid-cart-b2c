@@ -34,7 +34,8 @@ setup(name='trytond_nereid_cart_b2c',
     ],
     package_data={
         'trytond.modules.nereid_cart_b2c': info.get('xml', []) \
-                + info.get('translation', []),
+                + info.get('translation', []) \
+                + ['i18n/*.pot', 'i18n/pt_BR/LC_MESSAGES/*'],
     },
     classifiers=[
         'Development Status :: 4 - Beta',

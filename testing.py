@@ -4,7 +4,7 @@
 
     Register Testing Helpers
 
-    :copyright: © 2011 by Openlabs Technologies & Consulting (P) Limited
+    :copyright: © 2011-2012 by Openlabs Technologies & Consulting (P) Limited
     :license: BSD, see LICENSE for more details.
 """
 import datetime
@@ -133,4 +133,3 @@ def create_payment_term(obj):
         'name': 'Direct',
         'lines': [('create', {'type': 'remainder'})]
         })
-

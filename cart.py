@@ -4,7 +4,7 @@
 
     Cart
 
-    :copyright: (c) 2010-2011 by Openlabs Technologies & Consulting (P) LTD
+    :copyright: (c) 2010-2012 by Openlabs Technologies & Consulting (P) LTD
     :license: GPLv3, see LICENSE for more details
 '''
 from decimal import Decimal
@@ -21,6 +21,7 @@ from babel import numbers
 from trytond.model import ModelSQL, ModelView, fields
 
 from .forms import AddtoCartForm
+from .i18n import _
 
 
 # pylint: disable-msg=E1101
@@ -37,7 +38,7 @@ class Cart(ModelSQL):
     _description = 'Shopping Cart'
     _rec_name = 'user'
 
-    user = fields.Many2One('party.address', 'Cart owner', select=1)
+    user = fields.Many2One('nereid.user', 'Cart owner', select=1)
     sale = fields.Many2One('sale.sale', 'Sale Order')
     sessionid = fields.Char('Session ID', select=1)
     website = fields.Many2One('nereid.website', 'Website', select=1)
@@ -62,7 +63,7 @@ class Cart(ModelSQL):
         the checkout method has been moved to nereid.checkout.x
 
         For XHTTP/Ajax Requests a JSON object with order and lines information
-        which should be sufficient to show order information is returnes. T
+        which should be sufficient to show order information is returned.
         """
         cart = self.open_cart()
 
@@ -120,7 +121,7 @@ class Cart(ModelSQL):
         """
         cart = self.open_cart()
         self._clear_cart(cart)
-        flash('Your shopping cart has been cleared')
+        flash(_('Your shopping cart has been cleared'))
         return redirect(url_for('nereid.cart.view_cart'))
 
     def open_cart(self, create_order=False):
@@ -137,14 +138,14 @@ class Cart(ModelSQL):
         order pass :attr: create_order = True so that an order is also assured.
         """
         sale_obj = self.pool.get('sale.sale')
-        party_address_obj = self.pool.get('party.address')
+        nereid_user_obj = self.pool.get('nereid.user')
 
         # request.nereid_user is not used here this method is used by the 
         # signal handlers immediately after a user logs in (but before being 
         # redirected). This causes the cached property of nereid_user to remain
         # in old value through out the request, which will not  have ended when
         # this method is called.
-        user = party_address_obj.browse(
+        user = nereid_user_obj.browse(
             session.get('user', current_app.guest_user))
 
         # for a registered user there is only one cart, session is immaterial
@@ -160,7 +161,6 @@ class Cart(ModelSQL):
                 ('user', '=', user.id),
                 ('website', '=', request.nereid_website.id)
                 ], limit=1)
-
 
         if not ids:
             # Create a cart since it definitely does not exists
@@ -216,7 +216,7 @@ class Cart(ModelSQL):
         date_obj = self.pool.get('ir.date')
         sale_obj = self.pool.get('sale.sale')
         if cart.sale and cart.sale.sale_date \
-            and cart.sale.sale_date < date_obj.today():
+                and cart.sale.sale_date < date_obj.today():
             sale_obj.write(cart.sale.id, {'sale_date': date_obj.today()})
 
     def create_draft_sale(self, user):
@@ -226,20 +226,20 @@ class Cart(ModelSQL):
         :param user: Browse Record of the user
         """
         sale_obj = self.pool.get('sale.sale')
-        party_address_obj = self.pool.get('party.address')
+        nereid_user_obj = self.pool.get('nereid.user')
 
         site = request.nereid_website
-        guest_user = party_address_obj.browse(current_app.guest_user)
+        guest_user = nereid_user_obj.browse(current_app.guest_user)
 
         # Get the pricelist of active user, may be regd or guest
         price_list = user.party.sale_price_list.id \
-            if user.party.sale_price_list else None
+                if user.party.sale_price_list else None
 
         # If the regsitered user does not have a pricelist try for
         # the pricelist of guest user
         if (guest_user != user) and price_list is None:
             price_list = guest_user.party.sale_price_list.id \
-                if guest_user.party.sale_price_list else None
+                    if guest_user.party.sale_price_list else None
 
         # TODO: Evaluate if an error needs to be raised if the pricelist
         # is still not there.
@@ -252,7 +252,7 @@ class Cart(ModelSQL):
             'is_cart': True,
             'state': 'draft',
             'website': site.id,
-                }
+        }
         return sale_obj.create(sale_values)
 
     def add_to_cart(self):
@@ -277,9 +277,9 @@ class Cart(ModelSQL):
                 cart.sale.id, form.product.data, form.quantity.data, action
             )
             if action == 'add':
-                flash('The product has been added to your cart', 'info')
+                flash(_('The product has been added to your cart'), 'info')
             else:
-                flash('Your cart has been updated with the product', 'info')
+                flash(_('Your cart has been updated with the product'), 'info')
             if request.is_xhr:
                 return jsonify(message='OK')
 
@@ -346,7 +346,7 @@ class Cart(ModelSQL):
         sale_line = sale_line_obj.browse(line)
         assert sale_line.sale.id == self.open_cart().sale.id
         sale_line_obj.delete(line)
-        flash('The order item has been successfully removed')
+        flash(_('The order item has been successfully removed'))
 
         if request.is_xhr:
             return jsonify(message='OK')
@@ -441,7 +441,17 @@ def login_event_handler(website_obj):
     logged in or registered cart. If there is no such cart, it should be 
     created.
     """
-    cart_obj = website_obj.pool.get('nereid.cart')
+
+    try:
+        cart_obj = website_obj.pool.get('nereid.cart')
+    except KeyError:
+        # Just return silently. This KeyError is cause if the module is not
+        # installed for a specific database but exists in the python path
+        # and is loaded by the tryton module loader
+        current_app.logger.warning(
+            "nereid-cart-b2c module installed but not in database"
+        )
+        return
 
     # Find the guest cart
     ids = cart_obj.search([
