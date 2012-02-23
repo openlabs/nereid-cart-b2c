@@ -39,7 +39,7 @@ class Cart(ModelSQL):
     _rec_name = 'user'
 
     user = fields.Many2One('nereid.user', 'Cart owner', select=1)
-    sale = fields.Many2One('sale.sale', 'Sale Order')
+    sale = fields.Many2One('sale.sale', 'Sale Order', select=1)
     sessionid = fields.Char('Session ID', select=1)
     website = fields.Many2One('nereid.website', 'Website', select=1)
 
