@@ -41,7 +41,7 @@ class TestProduct(TestCase):
             testing_proxy.create_payment_term()
 
             cls.guest_user = testing_proxy.create_guest_user(company=company)
-                
+
             cls.regd_user = testing_proxy.create_user_party(
                 'Registered User',
                 'email@example.com', 'password', company
@@ -65,7 +65,8 @@ class TestProduct(TestCase):
                 product_template = product_template,
                 countries = [('set', cls.available_countries)],
                 currencies = [('set', cls.available_currencies)],
-                categories = [('set', [category])]
+                categories = [('set', [category])],
+                application_user = 1, guest_user = cls.guest_user
             )
 
             # Templates
@@ -141,8 +142,6 @@ class TestProduct(TestCase):
     def get_app(self, **options):
         options.update({
             'SITE': 'testsite.com',
-            'GUEST_USER': self.guest_user,
-            'TRYTON_USER': 1,
             })
         return testing_proxy.make_app(**options)
 

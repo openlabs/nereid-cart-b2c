@@ -38,7 +38,7 @@ class TestCart(TestCase):
             testing_proxy.create_payment_term()
 
             cls.guest_user = testing_proxy.create_guest_user(company=company)
-                
+ 
             cls.regd_user = testing_proxy.create_user_party(
                 'Registered User',
                 'email@example.com', 'password', company
@@ -56,12 +56,14 @@ class TestCart(TestCase):
                 category_template = category_template,
                 product_template = product_template,
                 countries = [('set', cls.available_countries)],
-                currencies = [('set', cls.available_currencies)])
+                currencies = [('set', cls.available_currencies)],
+                application_user = 1, guest_user = cls.guest_user
+            )
 
             # Templates
             testing_proxy.create_template('home.jinja', ' Home ', cls.site)
             testing_proxy.create_template(
-                'login.jinja', 
+                'login.jinja',
                 '{{ login_form.errors }} {{get_flashed_messages()}}', cls.site)
             testing_proxy.create_template('shopping-cart.jinja', 
                 'Cart:{{ cart.id }},{{get_cart_size()|round|int}},{{cart.sale.total_amount}}', 
@@ -100,8 +102,6 @@ class TestCart(TestCase):
     def get_app(self, **options):
         options.update({
             'SITE': 'testsite.com',
-            'GUEST_USER': self.guest_user,
-            'TRYTON_USER': 1,
             })
         return testing_proxy.make_app(**options)
 
