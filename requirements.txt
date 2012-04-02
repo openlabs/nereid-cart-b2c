@@ -1,0 +1,10 @@
+# This file specifically install tryton specific dependencies of nereid-cartb2c
+
+# Note - Nereid Catalog module should be installed before installing this 
+# module.
+
+# Install tryton sale module
+trytond_sale >2.0,<2.1
+
+# Install tryton sale price list module
+trytond-sale-price-list==2.0
