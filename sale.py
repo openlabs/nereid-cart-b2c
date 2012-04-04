@@ -21,6 +21,7 @@ class Sale(ModelSQL, ModelView):
     website = fields.Many2One(
         'nereid.website', 'Website', readonly=True, select=1
     )
+    nereid_user = fields.Many2One('nereid.user', 'Nereid User')
 
     def default_is_cart(self):
         """Dont make this as a default as this would cause orders being placed

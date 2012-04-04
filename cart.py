@@ -206,11 +206,11 @@ class Cart(ModelSQL):
                 cart.sale.currency != request.nereid_currency or \
                 cart.sale.party != user.party:
                 self.write(cart.id, {'sale': False})
-                
+
     def check_update_date(self, cart):
         """Check if the sale_date is same as today
         If not then update the sale_date with today's date
-        
+
         :param cart: browse record of the cart
         """
         date_obj = self.pool.get('ir.date')
@@ -252,6 +252,7 @@ class Cart(ModelSQL):
             'is_cart': True,
             'state': 'draft',
             'website': site.id,
+            'nereid_user': user.id
         }
         return sale_obj.create(sale_values)
 
