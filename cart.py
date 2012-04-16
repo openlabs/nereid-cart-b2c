@@ -146,7 +146,8 @@ class Cart(ModelSQL):
         # in old value through out the request, which will not  have ended when
         # this method is called.
         user = nereid_user_obj.browse(
-            session.get('user', current_app.guest_user))
+            session.get('user', request.nereid_website.guest_user.id)
+        )
 
         # for a registered user there is only one cart, session is immaterial
         if 'user' in session:
