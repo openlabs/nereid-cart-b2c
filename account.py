@@ -11,7 +11,7 @@ import warnings
 
 from werkzeug.exceptions import NotFound
 from nereid import render_template, login_required, request
-from nereid.helpers import Pagination
+from nereid.contrib.pagination import Pagination
 from trytond.model import ModelSQL
 
 
