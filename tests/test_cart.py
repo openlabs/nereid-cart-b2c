@@ -52,7 +52,8 @@ class TestCart(TestCase):
             cls.available_currencies = currency_obj.search(
                     [('code', '=', 'USD')]
             )
-            cls.site = testing_proxy.create_site('testsite.com', 
+            cls.site = testing_proxy.create_site(
+                'localhost', 
                 category_template = category_template,
                 product_template = product_template,
                 countries = [('set', cls.available_countries)],
@@ -101,7 +102,7 @@ class TestCart(TestCase):
 
     def get_app(self, **options):
         options.update({
-            'SITE': 'testsite.com',
+            'SITE': 'localhost',
             })
         return testing_proxy.make_app(**options)
 
