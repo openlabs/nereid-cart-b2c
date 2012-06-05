@@ -11,6 +11,7 @@ import datetime
 from dateutil.relativedelta import relativedelta
 
 from nereid.testing import testing_proxy
+from trytond.pool import Pool
 
 
 @testing_proxy.register()
@@ -60,7 +61,7 @@ def create_coa_minimal(obj, company=None):
     account_obj = obj.pool.get('account.account')
     account_journal_obj = obj.pool.get('account.journal')
     create_chart_account_obj = obj.pool.get(
-        'account.account.create_chart_account', type="wizard")
+        'account.create_chart', type="wizard")
     company_obj = obj.pool.get('company.company')
 
     account_template, = account_template_obj.search(
@@ -69,37 +70,37 @@ def create_coa_minimal(obj, company=None):
     if company is None:
         company, = company_obj.search([], limit=1)
 
-    wiz_id = create_chart_account_obj.create()
+    session_id, start_state, end_state = create_chart_account_obj.create()
     # Stage 1
-    create_chart_account_obj.execute(wiz_id, {}, 'account')
+    create_chart_account_obj.execute(session_id, {}, 'start')
     # Stage 2
-    create_chart_account_obj.execute(wiz_id, {
-        'form': {
+    create_chart_account_obj.execute(session_id, {
+        start_state: {
             'account_template': account_template,
             'company': company,
             }
-        }, 'create_account')
+        }, 'account')
     # Stage 3
-    revenue, = account_obj.search([
+    revenue = account_obj.search([
         ('kind', '=', 'revenue'),
         ('company', '=', company),
-        ], limit=1)
-    receivable, = account_obj.search([
+        ])
+    receivable = account_obj.search([
         ('kind', '=', 'receivable'),
         ('company', '=', company),
-        ], limit=1)
-    payable, = account_obj.search([
+        ])
+    payable = account_obj.search([
         ('kind', '=', 'payable'),
         ('company', '=', company),
-        ], limit=1)
-    create_chart_account_obj.execute(wiz_id, {
-        'form': {
+        ])
+    create_chart_account_obj.execute(session_id, {
+        start_state: {
             'account_receivable': receivable,
             'account_payable': payable,
             'account_revenue': revenue,
             'company': company,
             }
-        }, 'create_properties')
+        }, 'properties')
 
 
 @testing_proxy.register()
@@ -109,8 +110,8 @@ def get_account_by_kind(self, kind, company=None, silent=True):
     :param kind: receivable/payable/expense/revenue
     :param silent: dont raise error if account is not found
     """
-    account_obj = self.pool.get('account.account')
-    company_obj = self.pool.get('company.company')
+    account_obj = Pool().get('account.account')
+    company_obj = Pool().get('company.company')
 
     if company is None:
         company, = company_obj.search([], limit=1)
