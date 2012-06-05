@@ -11,6 +11,7 @@ register_classes()
 
 from nereid.testing import testing_proxy, TestCase
 from trytond.transaction import Transaction
+from trytond.pool import Pool
 
 
 class TestProduct(TestCase):
@@ -23,13 +24,13 @@ class TestProduct(TestCase):
         # Install module
         testing_proxy.install_module('nereid_cart_b2c')
 
-        uom_obj = testing_proxy.pool.get('product.uom')
-        country_obj = testing_proxy.pool.get('country.country')
-        currency_obj = testing_proxy.pool.get('currency.currency')
-        user_obj = testing_proxy.pool.get('nereid.user')
-        pricelist_obj = testing_proxy.pool.get('product.price_list')
-
         with Transaction().start(testing_proxy.db_name, 1, None) as txn:
+            uom_obj = Pool().get('product.uom')
+            country_obj = Pool().get('country.country')
+            currency_obj = Pool().get('currency.currency')
+            user_obj = Pool().get('nereid.user')
+            pricelist_obj = Pool().get('product.price_list')
+
             # Create company
             company = cls.company = testing_proxy.create_company('Test Co Inc')
             testing_proxy.set_company_for_user(1, cls.company)
@@ -89,7 +90,7 @@ class TestProduct(TestCase):
 
             cls.product = testing_proxy.create_product(
                 'product 1', category,
-                type = 'stockable',
+                type = 'goods',
                 salable = True,
                 list_price = Decimal('10'),
                 cost_price = Decimal('5'),
@@ -100,7 +101,7 @@ class TestProduct(TestCase):
                 )
             cls.product2 = testing_proxy.create_product(
                 'product 2', category,
-                type = 'stockable',
+                type = 'goods',
                 salable = True,
                 list_price = Decimal('15'),
                 cost_price = Decimal('5'),

@@ -9,6 +9,7 @@
 '''
 from decimal import Decimal
 from functools import partial
+import warnings
 
 from nereid import jsonify, render_template, flash
 from nereid.helpers import login_required, url_for
@@ -19,6 +20,7 @@ from babel import numbers
 
 
 from trytond.model import ModelSQL, ModelView, fields
+from trytond.pool import Pool
 
 from .forms import AddtoCartForm
 from .i18n import _
@@ -38,10 +40,10 @@ class Cart(ModelSQL):
     _description = 'Shopping Cart'
     _rec_name = 'user'
 
-    user = fields.Many2One('nereid.user', 'Cart owner', select=1)
-    sale = fields.Many2One('sale.sale', 'Sale Order', select=1)
-    sessionid = fields.Char('Session ID', select=1)
-    website = fields.Many2One('nereid.website', 'Website', select=1)
+    user = fields.Many2One('nereid.user', 'Cart owner', select=True)
+    sale = fields.Many2One('sale.sale', 'Sale Order', select=True)
+    sessionid = fields.Char('Session ID', select=True)
+    website = fields.Many2One('nereid.website', 'Website', select=True)
 
     def cart_size(self):
         "Returns the sum of quantities in the cart"
@@ -109,9 +111,9 @@ class Cart(ModelSQL):
             headers=[('Cache-Control', 'max-age=0')])
 
     def _clear_cart(self, cart):
-        sale_obj = self.pool.get('sale.sale')
+        sale_obj = Pool().get('sale.sale')
         if cart.sale:
-            sale_obj.workflow_trigger_validate(cart.sale.id, 'cancel')
+            sale_obj.cancel([cart.sale.id])
             sale_obj.delete(cart.sale.id)
         self.delete(cart.id)
 
@@ -137,8 +139,8 @@ class Cart(ModelSQL):
         a sale order. For methods like add to cart which definitely need a sale
         order pass :attr: create_order = True so that an order is also assured.
         """
-        sale_obj = self.pool.get('sale.sale')
-        nereid_user_obj = self.pool.get('nereid.user')
+        sale_obj = Pool().get('sale.sale')
+        nereid_user_obj = Pool().get('nereid.user')
 
         # request.nereid_user is not used here this method is used by the 
         # signal handlers immediately after a user logs in (but before being 
@@ -168,7 +170,7 @@ class Cart(ModelSQL):
             ids = [self.create({
                 'user': user.id,
                 'website': request.nereid_website.id,
-                'sessionid': session.sid if 'user' not in session else False,
+                'sessionid': session.sid if 'user' not in session else None,
             })]
 
         cart = self.browse(ids[0])
@@ -214,8 +216,8 @@ class Cart(ModelSQL):
 
         :param cart: browse record of the cart
         """
-        date_obj = self.pool.get('ir.date')
-        sale_obj = self.pool.get('sale.sale')
+        date_obj = Pool().get('ir.date')
+        sale_obj = Pool().get('sale.sale')
         if cart.sale and cart.sale.sale_date \
                 and cart.sale.sale_date < date_obj.today():
             sale_obj.write(cart.sale.id, {'sale_date': date_obj.today()})
@@ -226,8 +228,8 @@ class Cart(ModelSQL):
 
         :param user: Browse Record of the user
         """
-        sale_obj = self.pool.get('sale.sale')
-        nereid_user_obj = self.pool.get('nereid.user')
+        sale_obj = Pool().get('sale.sale')
+        nereid_user_obj = Pool().get('nereid.user')
 
         site = request.nereid_website
         guest_user = nereid_user_obj.browse(current_app.guest_user)
@@ -297,8 +299,8 @@ class Cart(ModelSQL):
         :param action: set - set the quantity to the given quantity
                        add - add quantity to existing quantity
         '''
-        sale_line_obj = self.pool.get('sale.line')
-        sale_obj = self.pool.get('sale.sale')
+        sale_line_obj = Pool().get('sale.line')
+        sale_obj = Pool().get('sale.sale')
 
         sale = sale_obj.browse(sale_id)
         ids = sale_line_obj.search([
@@ -316,7 +318,13 @@ class Cart(ModelSQL):
                 'type': 'line'
                 }
             values.update(sale_line_obj.on_change_quantity(values))
-            return sale_line_obj.write(order_line.id, values)
+
+            new_values = { }
+            for key, value in values.iteritems():
+                if '.' not in key:
+                    new_values[key] = value
+
+            return sale_line_obj.write(order_line.id, new_values)
         else:
             values = {
                 'product': product_id,
@@ -343,7 +351,7 @@ class Cart(ModelSQL):
 
         Response: 'OK' if X-HTTPRequest else redirect to shopping cart
         """
-        sale_line_obj = self.pool.get('sale.line')
+        sale_line_obj = Pool().get('sale.line')
 
         sale_line = sale_line_obj.browse(line)
         assert sale_line.sale.id == self.open_cart().sale.id
@@ -380,7 +388,7 @@ class Website(ModelSQL, ModelView):
         should reset the cart if the currency of the cart is not the same as
         the one here
         """
-        cart_obj = self.pool.get('nereid.cart')
+        cart_obj = Pool().get('nereid.cart')
 
         rv = super(Website, self).set_currency()
 
@@ -396,7 +404,7 @@ class Website(ModelSQL, ModelView):
     def _user_status(self):
         """Add cart size and amount to the dictionary
         """
-        cart_obj = self.pool.get('nereid.cart')
+        cart_obj = Pool().get('nereid.cart')
         cart = cart_obj.open_cart()
 
         rv = super(Website, self)._user_status()
@@ -442,10 +450,19 @@ def login_event_handler(website_obj):
     When a user logs in, all items in his guest cart should be added to his
     logged in or registered cart. If there is no such cart, it should be 
     created.
+
+    .. versionchanged:: 2.4.0.1
+        website_obj was previously a mandatory argument because the pool
+        object in the class was required to load other objects from the pool.
+        Since pool object is a singleton, this object is not required.
     """
 
+    if website_obj is not None:
+        warnings.warn("login_event_handler will not accept arguments from "
+            "Version 2.5 +", DeprecationWarning, stacklevel=2)
+
     try:
-        cart_obj = website_obj.pool.get('nereid.cart')
+        cart_obj = Pool().get('nereid.cart')
     except KeyError:
         # Just return silently. This KeyError is cause if the module is not
         # installed for a specific database but exists in the python path

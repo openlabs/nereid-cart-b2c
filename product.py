@@ -10,6 +10,7 @@
 
 from trytond.model import ModelSQL, ModelView
 from trytond.transaction import Transaction
+from trytond.pool import Pool
 from nereid import request, cache
 from nereid.globals import current_app
 from nereid.helpers import key_from_list
@@ -41,7 +42,7 @@ class Product(ModelSQL, ModelView):
         # If the registered user does not have a pricelist try for
         # the pricelist of guest user
         if not request.is_guest_user and price_list is None:
-            user_obj = self.pool.get('nereid.user')
+            user_obj = Pool().get('nereid.user')
             guest_user = user_obj.browse(current_app.guest_user)
             price_list = guest_user.sale_price_list.id if \
                 guest_user.sale_price_list else None

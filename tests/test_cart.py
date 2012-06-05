@@ -11,6 +11,7 @@ register_classes()
 
 from nereid.testing import testing_proxy, TestCase
 from trytond.transaction import Transaction
+from trytond.pool import Pool
 
 
 class TestCart(TestCase):
@@ -22,11 +23,11 @@ class TestCart(TestCase):
         # Install module
         testing_proxy.install_module('nereid_cart_b2c')
 
-        uom_obj = testing_proxy.pool.get('product.uom')
-        country_obj = testing_proxy.pool.get('country.country')
-        currency_obj = testing_proxy.pool.get('currency.currency')
-
         with Transaction().start(testing_proxy.db_name, 1, None) as txn:
+            uom_obj = Pool().get('product.uom')
+            country_obj = Pool().get('country.country')
+            currency_obj = Pool().get('currency.currency')
+
             # Create company
             company = cls.company = testing_proxy.create_company('Test Co Inc')
             testing_proxy.set_company_for_user(1, cls.company)
@@ -78,7 +79,7 @@ class TestCart(TestCase):
                 'Category', uri='category')
             cls.product = testing_proxy.create_product(
                 'product 1', category,
-                type = 'stockable',
+                type = 'goods',
                 salable = True,
                 list_price = Decimal('10'),
                 cost_price = Decimal('5'),
@@ -89,7 +90,7 @@ class TestCart(TestCase):
                 )
             cls.product2 = testing_proxy.create_product(
                 'product 2', category,
-                type = 'stockable',
+                type = 'goods',
                 salable = True,
                 list_price = Decimal('10'),
                 cost_price = Decimal('5'),
@@ -254,7 +255,7 @@ class TestCart(TestCase):
             self.assertEqual(response.status_code, 302)
             rv = c.get('/en_US/cart')
             self.assertEqual(rv.status_code, 200)
-            self.assertEqual(rv.data, 'Cart:8,0,False')
+            self.assertEqual(rv.data, 'Cart:8,0,None')
             
     def test_0050_same_user_two_session(self):
         """
@@ -333,7 +334,7 @@ class TestCart(TestCase):
             c.get('/en_US/cart/clear')
             rv = c.get('/en_US/cart')
             self.assertEqual(rv.status_code, 200)
-            self.assertEqual(rv.data, 'Cart:10,0,False')
+            self.assertEqual(rv.data, 'Cart:10,0,None')
 
         with Transaction().start(testing_proxy.db_name, testing_proxy.user, None):
             self.assertFalse(self.sale_obj.search([('id', '=', sale)]))

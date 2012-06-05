@@ -13,6 +13,7 @@ from werkzeug.exceptions import NotFound
 from nereid import render_template, login_required, request
 from nereid.contrib.pagination import Pagination
 from trytond.model import ModelSQL
+from trytond.pool import Pool
 
 
 class Account(ModelSQL):
@@ -35,9 +36,9 @@ class Account(ModelSQL):
 
     def account_context(self):
         "First get existing context and then add"
-        sale_obj = self.pool.get('sale.sale')
-        invoice_obj = self.pool.get('account.invoice')
-        shipment_obj = self.pool.get('stock.shipment.out')
+        sale_obj = Pool().get('sale.sale')
+        invoice_obj = Pool().get('account.invoice')
+        shipment_obj = Pool().get('stock.shipment.out')
 
         sales = Pagination(sale_obj, [
             ('party', '=', request.nereid_user.party.id),
@@ -77,7 +78,7 @@ class Account(ModelSQL):
     @login_required
     def sales(self, page=1):
         'All sales'
-        sale_obj = self.pool.get('sale.sale')
+        sale_obj = Pool().get('sale.sale')
         sales = Pagination(sale_obj, [
             ('party', '=', request.nereid_user.party.id),
             ('state', '!=', 'draft')
@@ -92,7 +93,7 @@ class Account(ModelSQL):
             "Use `sale.sale.render` instead", 
             DeprecationWarning
             )
-        sale_obj = self.pool.get('sale.sale')
+        sale_obj = Pool().get('sale.sale')
         sales_ids = sale_obj.search(
             [
             ('party', '=', request.nereid_user.party.id),
@@ -106,7 +107,7 @@ class Account(ModelSQL):
     @login_required
     def invoices(self, page=1):
         'List of Invoices'
-        invoice_obj = self.pool.get('account.invoice')
+        invoice_obj = Pool().get('account.invoice')
         invoices = Pagination(invoice_obj, [
             ('party', '=', request.nereid_user.party.id),
             ('state', '!=', 'draft')
@@ -116,7 +117,7 @@ class Account(ModelSQL):
     @login_required
     def invoice(self, invoice):
         'individual Invoice'
-        invoice_obj = self.pool.get('account.invoice')
+        invoice_obj = Pool().get('account.invoice')
         invoice_ids = invoice_obj.search(
             [
             ('party', '=', request.nereid_user.party.id),
@@ -131,7 +132,7 @@ class Account(ModelSQL):
     @login_required
     def shipments(self, page=1):
         'List of Shipments'
-        shipment_obj = self.pool.get('stock.shipment.out')
+        shipment_obj = Pool().get('stock.shipment.out')
         shipments = Pagination(shipment_obj, [
             ('customer', '=', request.nereid_user.party.id),
             ('state', '!=', 'draft'),
@@ -141,7 +142,7 @@ class Account(ModelSQL):
     @login_required
     def shipment(self, shipment):
         'Shipment'
-        shipment_obj = self.pool.get('stock.shipment.out')
+        shipment_obj = Pool().get('stock.shipment.out')
         shipment_ids = shipment_obj.search(
             [
             ('customer', '=', request.nereid_user.party.id),
