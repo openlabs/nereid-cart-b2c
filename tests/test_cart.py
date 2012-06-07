@@ -67,8 +67,10 @@ class TestCart(TestCase):
             testing_proxy.create_template(
                 'login.jinja',
                 '{{ login_form.errors }} {{get_flashed_messages()}}', cls.site)
-            testing_proxy.create_template('shopping-cart.jinja', 
-                'Cart:{{ cart.id }},{{get_cart_size()|round|int}},{{cart.sale.total_amount}}', 
+            testing_proxy.create_template(
+                'shopping-cart.jinja',
+                'Cart:{{ cart.id }},{{get_cart_size()|round|int}},'
+                '{{cart.sale.total_amount}}',
                 cls.site)
             product_template = testing_proxy.create_template(
                 'product.jinja', ' ', cls.site)

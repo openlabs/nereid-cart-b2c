@@ -1,8 +1,6 @@
 # -*- coding: UTF-8 -*-
 '''
-    nereid_cart.account
-
-    User Account
+    nereid_cart.website
 
     :copyright: (c) 2010-2012 by Openlabs Technologies & Consulting (P) LTD
     :license: GPLv3, see LICENSE for more details
@@ -12,30 +10,44 @@ import warnings
 from werkzeug.exceptions import NotFound
 from nereid import render_template, login_required, request
 from nereid.contrib.pagination import Pagination
-from trytond.model import ModelSQL
+from trytond.model import ModelSQL, ModelView, fields
 from trytond.pool import Pool
 
 
-class Account(ModelSQL):
-    """When the account page is displayed it may be required to display a lot of
-        information. and this depends from site to site. So rather than 
-        rewriting the render page everytime it is optimal to have a context 
-        being rebuilt by subclassing.
-
-        This basic context builder builds sales, invoices and shipments, 
-        (only last 5) of the customer.
-
-        To add more items to the context, subclass the method and call super 
-        to get the result of this method and then add your content to it.
+class Website(ModelSQL, ModelView):
+    """
+    Website
     """
     _name = 'nereid.website'
 
+    #: Stock location to be used when calculating the stock.
+    #:
+    #: ..versionadded: 2.4.0.4
+    stock_location = fields.Many2One(
+        'stock.location', 'Stock Location', required=True,
+        domain=[('type', '=', 'storage')],
+        help="Stock location to be used to check availability"
+    )
+
     def __init__(self):
-        super(Account, self).__init__()
+        super(Website, self).__init__()
         self.per_page = 10
 
     def account_context(self):
-        "First get existing context and then add"
+        """
+        When the account page is displayed it may be required to display a
+        lot of information, and this depends from site to site. So rather than 
+        rewriting the render page everytime it is optimal to have a context
+        being rebuilt by subclassing.
+
+        This basic context builder builds sales, invoices and shipments,
+        (only last 5) of the customer.
+
+        To add more items to the context, subclass the method and call super
+        to get the result of this method and then add your content to it.
+
+        :return: A dictionary of items to render a context
+        """
         sale_obj = Pool().get('sale.sale')
         invoice_obj = Pool().get('account.invoice')
         shipment_obj = Pool().get('stock.shipment.out')
@@ -55,7 +67,7 @@ class Account(ModelSQL):
             ('state', '!=', 'draft'),
             ], 1, 5)
 
-        context = super(Account, self).account_context()
+        context = super(Website, self).account_context()
         context.update({
             'sales': sales,
             'invoices': invoices,
@@ -154,4 +166,4 @@ class Account(ModelSQL):
         shipment = shipment_obj.browse(shipment_ids[0])
         return render_template('shipment.jinja', shipment=shipment)
 
-Account()
+Website()

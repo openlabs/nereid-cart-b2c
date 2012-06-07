@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
-    <!--
-        This file is part of Tryton and Nereid. The COPYRIGHT file at the
-        top level of this repository contains the full copyright notices
-        and license terms.
-    -->
+<!--
+    This file is part of Tryton and Nereid. The COPYRIGHT file at the
+    top level of this repository contains the full copyright notices
+    and license terms.
+-->
 <tryton>
   <data>
-          <record model="nereid.template.context_processor" id="ctx_proc_cart">
-            <field name="method">nereid.cart.context_processor</field>
-        </record>
+    <record model="nereid.template.context_processor" id="ctx_proc_cart">
+      <field name="method">nereid.cart.context_processor</field>
+    </record>
   </data>
 </tryton>

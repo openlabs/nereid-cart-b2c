@@ -10,5 +10,5 @@
 from .product import *
 from .sale import *
 from .cart import *
-from .account import *
+from .website import *
 from .testing import *

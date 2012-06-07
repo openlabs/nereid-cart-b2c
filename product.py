@@ -21,16 +21,16 @@ class Product(ModelSQL, ModelView):
     _name = "product.product"
 
     def sale_price(self, product, quantity=0):
-        """Return the Sales Price. 
+        """Return the Sales Price.
         A wrapper designed to work as a context variable in templating
 
         The price is calculated from the pricelist associated with the current
-        user. The user in the case of guest user is logged in user. In the 
-        event that the logged in user does not have a pricelist set against 
+        user. The user in the case of guest user is logged in user. In the
+        event that the logged in user does not have a pricelist set against
         the user, the guest user's pricelist is chosen.
 
-        Finally if neither the guest user, nor the regsitered user has a 
-        pricelist set against them then the list price is displayed as the 
+        Finally if neither the guest user, nor the regsitered user has a
+        pricelist set against them then the list price is displayed as the
         price of the product
 
         :param product: ID of product
@@ -60,7 +60,7 @@ class Product(ModelSQL, ModelView):
         if rv is None:
             # There is a valid pricelist, now get the price
             with Transaction().set_context(
-                    customer = request.nereid_user.party.id, 
+                    customer = request.nereid_user.party.id,
                     price_list = price_list,
                     currency = request.nereid_currency.id):
                 rv = self.get_sale_price([product], quantity)[product]

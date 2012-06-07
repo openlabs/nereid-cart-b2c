@@ -138,7 +138,6 @@ class TestProduct(TestCase):
             )
             cls.guest_pl_margin = pl_2_margin
 
-
             txn.cursor.commit()
 
     def get_app(self, **options):
@@ -174,7 +173,7 @@ class TestProduct(TestCase):
         Test the pricelist lookup algorithm
         """
         app = self.get_app()
-                
+
         with app.test_client() as c:
             rv = c.get('/en_US/product/product-1')
             self.assertEqual(
