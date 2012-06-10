@@ -27,6 +27,7 @@ class TestCart(TestCase):
             uom_obj = Pool().get('product.uom')
             country_obj = Pool().get('country.country')
             currency_obj = Pool().get('currency.currency')
+            location_obj = Pool().get('stock.location')
 
             # Create company
             company = cls.company = testing_proxy.create_company('Test Co Inc')
@@ -39,27 +40,28 @@ class TestCart(TestCase):
             testing_proxy.create_payment_term()
 
             cls.guest_user = testing_proxy.create_guest_user(company=company)
- 
+
             cls.regd_user = testing_proxy.create_user_party(
                 'Registered User',
                 'email@example.com', 'password', company
             )
 
-            category_template = testing_proxy.create_template(
-                'category-list.jinja', ' ')
-            product_template = testing_proxy.create_template(
-                'product-list.jinja', ' ')
+            testing_proxy.create_template('category-list.jinja', ' ')
+            testing_proxy.create_template('product-list.jinja', ' ')
             cls.available_countries = country_obj.search([], limit=5)
             cls.available_currencies = currency_obj.search(
                     [('code', '=', 'USD')]
             )
+            location, = location_obj.search([
+                ('type', '=', 'storage')
+            ], limit=1)
             cls.site = testing_proxy.create_site(
-                'localhost', 
-                category_template = category_template,
-                product_template = product_template,
+                'localhost',
                 countries = [('set', cls.available_countries)],
                 currencies = [('set', cls.available_currencies)],
-                application_user = 1, guest_user = cls.guest_user
+                application_user = 1,
+                guest_user = cls.guest_user,
+                stock_location = location,
             )
 
             # Templates

@@ -19,6 +19,7 @@
         'cart.xml',
         'urls.xml',
         'sale.xml',
+        'website.xml',
         ],
     'translation': [
         ],

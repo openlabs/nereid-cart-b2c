@@ -1,8 +1,11 @@
 #!/usr/bin/env python
 #This file is part of Tryton and Nereid.  The COPYRIGHT file at the top level of
 #this repository contains the full copyright notices and license terms.
+import json
+from datetime import date
 from decimal import Decimal
 import unittest2 as unittest
+from dateutil.relativedelta import relativedelta
 
 from trytond.config import CONFIG
 CONFIG.options['db_type'] = 'sqlite'
@@ -30,6 +33,7 @@ class TestProduct(TestCase):
             currency_obj = Pool().get('currency.currency')
             user_obj = Pool().get('nereid.user')
             pricelist_obj = Pool().get('product.price_list')
+            location_obj = Pool().get('stock.location')
 
             # Create company
             company = cls.company = testing_proxy.create_company('Test Co Inc')
@@ -61,27 +65,30 @@ class TestProduct(TestCase):
             )
             category = testing_proxy.create_product_category(
                 'Category', uri='category')
+            location, = location_obj.search([
+                ('type', '=', 'storage')
+            ], limit=1)
             cls.site = testing_proxy.create_site(
-                'localhost', 
-                category_template = category_template,
-                product_template = product_template,
+                'localhost',
                 countries = [('set', cls.available_countries)],
                 currencies = [('set', cls.available_currencies)],
                 categories = [('set', [category])],
-                application_user = 1, guest_user = cls.guest_user
+                application_user = 1,
+                guest_user = cls.guest_user,
+                stock_location = location,
             )
 
             # Templates
             testing_proxy.create_template('home.jinja', ' Home ', cls.site)
             testing_proxy.create_template(
-                'login.jinja', 
+                'login.jinja',
                 '{{ login_form.errors }} {{get_flashed_messages()}}', cls.site)
-            testing_proxy.create_template('shopping-cart.jinja', 
+            testing_proxy.create_template('shopping-cart.jinja',
                 'Cart:{{ cart.id }},{{get_cart_size()|round|int}},'
-                '{{cart.sale.total_amount}}', 
+                '{{cart.sale.total_amount}}',
                 cls.site)
             product_template = testing_proxy.create_template(
-                'product.jinja', 
+                'product.jinja',
                 '{{ product.sale_price(product.id) }}', cls.site
             )
             category_template = testing_proxy.create_template(
@@ -219,6 +226,58 @@ class TestProduct(TestCase):
             self.assertEqual(
                 Decimal(rv.data), Decimal('15') *  self.guest_pl_margin
             )
+
+    def test_0040_availability(self):
+        """
+        Test the availability returned for the products
+        """
+        app = self.get_app()
+
+        with app.test_client() as c:
+            rv = c.get('/en_US/product-availability/product-1')
+            availability = json.loads(rv.data)
+            self.assertEqual(availability['quantity'], 0.00)
+            self.assertEqual(availability['forecast_quantity'], 0.00)
+
+        with Transaction().start(testing_proxy.db_name, 1, None) as txn:
+            stock_move_obj = Pool().get('stock.move')
+            product_obj = Pool().get('product.product')
+            website_obj = Pool().get('nereid.website')
+            location_obj = Pool().get('stock.location')
+
+            product = product_obj.browse(self.product)
+            website = website_obj.browse(website_obj.search([])[0])
+            supplier_id, = location_obj.search([('code', '=', 'SUP')])
+            stock_move_obj.create({
+                'product': product.id,
+                'uom': product.sale_uom.id,
+                'quantity': 10,
+                'from_location': supplier_id,
+                'to_location': website.stock_location.id,
+                'company': website.company.id,
+                'unit_price': Decimal('1'),
+                'currency': website.currencies[0].id,
+                'state': 'done'
+            })
+            stock_move_obj.create({
+                'product': product.id,
+                'uom': product.sale_uom.id,
+                'quantity': 10,
+                'from_location': supplier_id,
+                'to_location': website.stock_location.id,
+                'company': website.company.id,
+                'unit_price': Decimal('1'),
+                'currency': website.currencies[0].id,
+                'planned_date': date.today() + relativedelta(days=1),
+                'state': 'draft'
+            })
+            txn.cursor.commit()
+
+        with app.test_client() as c:
+            rv = c.get('/en_US/product-availability/product-1')
+            availability = json.loads(rv.data)
+            self.assertEqual(availability['forecast_quantity'], 20.00)
+            self.assertEqual(availability['quantity'], 10.00)
 
 
 def suite():

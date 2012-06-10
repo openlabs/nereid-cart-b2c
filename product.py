@@ -7,11 +7,13 @@
     :copyright: (c) 2010-2012 by Openlabs Technologies & Consulting (P) LTD
     :license: GPLv3, see LICENSE for more details
 '''
+from datetime import date
+from dateutil.relativedelta import relativedelta
 
 from trytond.model import ModelSQL, ModelView
 from trytond.transaction import Transaction
 from trytond.pool import Pool
-from nereid import request, cache
+from nereid import request, cache, jsonify, abort
 from nereid.globals import current_app
 from nereid.helpers import key_from_list
 
@@ -68,5 +70,68 @@ class Product(ModelSQL, ModelView):
             # Now convert the price to the session currency
             cache.set(cache_key, rv, 60 * 5)
         return rv
+
+    def get_availability(self, product):
+        """
+        This method could be subclassed to implement your custom availability
+        behavior.
+
+        By default the forecasted quantity is a 7 day forecast. In future this
+        feature may be replaced with a configuration value on the website to
+        specify the number of days to forecast.
+
+        .. warning::
+            `quantity` is mandatory information which needs to be returned, no
+            matter what your logic for computing that is
+
+        :param product: ID of the product
+        :return: A dictionary with `quantity` and `forecast_quantity`
+        """
+        context = {
+            'location': request.nereid_website.stock_location.id,
+            'stock_date_end': date.today() + relativedelta(days=7)
+        }
+        with Transaction().set_context(**context):
+            return {
+                'quantity': self.get_quantity(
+                    [product], 'quantity')[product],
+                'forecast_quantity': self.get_quantity(
+                    [product], 'forecast_quantity')[product],
+            }
+
+    def availability(self, uri):
+        """
+        Returns the following information for a product:
+
+        +-------------------+-----------------------------------------------+
+        | quantity          | Available readily to buy                      |
+        +-------------------+-----------------------------------------------+
+        | forecast_quantity | Forecasted quantity, if the site needs it     |
+        +-------------------+-----------------------------------------------+
+
+        .. note::
+            To modify the availability, or to send any additional information,
+            it is recommended to subclass the :py:meth:`~get_availability` and
+            implement your custom logic. For example, you might want to check
+            stock with your vendor for back orders or send a message like
+            `Only 5 pieces left`
+
+        :param product: ID of the product
+        :return: JSON object
+        """
+        allowed_categories = request.nereid_website.get_categories() + [None]
+        product_ids = self.search([
+            ('displayed_on_eshop', '=', True),
+            ('uri', '=', uri),
+            ('category', 'in', allowed_categories),
+            ]
+        )
+        if not product_ids:
+            return abort(404)
+
+        # Location of stock for the website
+        location = request.nereid_website.stock_location.id
+        with Transaction().set_context(locations=[location]):
+            return jsonify(self.get_availability(product_ids[0]))
 
 Product()

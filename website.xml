@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    This file is part of Tryton and Nereid. The COPYRIGHT file at the
+    top level of this repository contains the full copyright notices
+    and license terms.
+-->
+<tryton>
+  <data>
+      <record id="website_cart_info" model="ir.ui.view">
+          <field name="model">nereid.website</field>
+          <field name="inherit" ref="nereid.website_view_form"/>
+          <field name="arch" type="xml">
+              <![CDATA[
+              <data>
+                  <xpath expr="/form/notebook/page[@id='catalog']/field[@name='categories']" 
+                        position="before">
+                          <label name="stock_location"/>
+                          <field name="stock_location"/>
+                  </xpath>
+              </data>
+              ]]>
+          </field>
+      </record>
+  </data>
+</tryton>

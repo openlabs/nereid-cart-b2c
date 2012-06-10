@@ -87,5 +87,12 @@
             <field name="url_map" ref="nereid.default_url_map" />
         </record>
 
+        <record id="product_availability" model="nereid.url_rule">
+            <field name="rule">/&lt;language&gt;/product-availability/&lt;uri&gt;</field>
+            <field name="endpoint">product.product.availability</field>
+            <field name="sequence" eval="230" />
+            <field name="url_map" ref="nereid.default_url_map" />
+        </record>
+
     </data>
 </tryton>
