@@ -88,7 +88,7 @@ class Product(ModelSQL, ModelView):
         :return: A dictionary with `quantity` and `forecast_quantity`
         """
         context = {
-            'location': request.nereid_website.stock_location.id,
+            'locations': [request.nereid_website.stock_location.id],
             'stock_date_end': date.today() + relativedelta(days=7)
         }
         with Transaction().set_context(**context):
@@ -131,7 +131,6 @@ class Product(ModelSQL, ModelView):
 
         # Location of stock for the website
         location = request.nereid_website.stock_location.id
-        with Transaction().set_context(locations=[location]):
-            return jsonify(self.get_availability(product_ids[0]))
+        return jsonify(self.get_availability(product_ids[0]))
 
 Product()
