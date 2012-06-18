@@ -166,7 +166,7 @@ class TestCart(TestCase):
             self.assertEqual(len(sale.lines), 1)
             self.assertEqual(sale.lines[0].product.id, self.product)
             self.assertEqual(sale.lines[0].quantity, quantity)
-            
+
     def test_0020_cart_diff_apps(self):
         """Call the cart with two different applications 
         and assert they are not equal"""
@@ -177,9 +177,9 @@ class TestCart(TestCase):
         with app.test_client() as c2:
             rv2 = c2.get('/en_US/cart')
             self.assertEqual(rv2.status_code, 200)
-        
+
         self.assertTrue(rv1.data != rv2.data)
-        
+
     def test_0030_add_items_n_login(self):
         """User browses cart, adds items and logs in
         Expected behaviour :  The items in the guest cart is added to the 
@@ -196,15 +196,15 @@ class TestCart(TestCase):
             rv = c.get('/en_US/cart')
             self.assertEqual(rv.status_code, 200)
             cart_data1 = rv.data[6:]
-            
+
             #Login now and access cart
             self.login(c, 'email@example.com', 'password')
             rv = c.get('/en_US/cart')
             self.assertEqual(rv.status_code, 200)
             cart_data2 = rv.data[6:]
-            
+
             self.assertEqual(cart_data1, cart_data2)
-    
+
     def test_0035_add_to_cart(self):
         """
         Test the add and set modes of add_to_cart
@@ -260,19 +260,19 @@ class TestCart(TestCase):
             rv = c.get('/en_US/cart')
             self.assertEqual(rv.status_code, 200)
             self.assertEqual(rv.data, 'Cart:8,0,None')
-            
+
     def test_0050_same_user_two_session(self):
         """
         Registered user on two different sessions should see the same cart
         """
-        with Transaction().start(testing_proxy.db_name, 
+        with Transaction().start(testing_proxy.db_name,
                 testing_proxy.user, testing_proxy.context) as txn:
             testing_proxy.create_user_party(
                 'Registered User 2', 'email2@example.com', 'password2',
                 self.company
             )
             txn.cursor.commit()
-            
+
         app = self.get_app()
         with app.test_client() as c:
             self.login(c, 'email2@example.com', 'password2')
@@ -284,10 +284,9 @@ class TestCart(TestCase):
             rv = c.get('/en_US/cart')
             self.assertEqual(rv.status_code, 200)
             self.assertEqual(rv.data, 'Cart:9,6,60.00')
-            
+
         with app.test_client() as c:
             self.login(c, 'email2@example.com', 'password2')
-                
             rv = c.get('/en_US/cart')
             self.assertEqual(rv.status_code, 200)
             self.assertEqual(rv.data, 'Cart:9,6,60.00')
@@ -342,7 +341,31 @@ class TestCart(TestCase):
 
         with Transaction().start(testing_proxy.db_name, testing_proxy.user, None):
             self.assertFalse(self.sale_obj.search([('id', '=', sale)]))
-        
+
+    def test_0080_reject_negative_quantity(self):
+        """
+        If a negative quantity is sent to add to cart, then reject it
+        """
+        app = self.get_app()
+        with app.test_client() as c:
+            self.login(c, 'email2@example.com', 'password2')
+            rv = c.post('/en_US/cart/add', data={
+                'product': self.product2, 'quantity': 10
+                })
+            self.assertEqual(rv.status_code, 302)
+            rv = c.get('/en_US/cart')
+            self.assertEqual(rv.status_code, 200)
+            self.assertEqual(rv.data, 'Cart:10,10,100.00')
+
+            #: Add a negative quantity and nothing should change
+            rv = c.post('/en_US/cart/add', data={
+                'product': self.product2, 'quantity': -10
+            })
+            self.assertEqual(rv.status_code, 302)
+            rv = c.get('/en_US/cart')
+            self.assertEqual(rv.status_code, 200)
+            self.assertEqual(rv.data, 'Cart:10,10,100.00')
+
 
 def suite():
     "Cart test suite"

@@ -277,6 +277,11 @@ class Cart(ModelSQL):
         if request.method == 'POST' and form.validate():
             cart = self.open_cart(create_order=True)
             action = request.values.get('action', 'set')
+            if form.quantity.data <= 0:
+                flash(
+                    _('Be sensible! You can only add real quantities to cart')
+                )
+                return redirect(url_for('nereid.cart.view_cart'))
             self._add_or_update(
                 cart.sale.id, form.product.data, form.quantity.data, action
             )
