@@ -449,7 +449,7 @@ Website()
 
 
 @login.connect
-def login_event_handler(website_obj):
+def login_event_handler(website_obj=None):
     """This method is triggered when a login event occurs.
 
     When a user logs in, all items in his guest cart should be added to his
