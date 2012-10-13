@@ -328,7 +328,8 @@ class Cart(ModelSQL):
             for key, value in values.iteritems():
                 if '.' not in key:
                     new_values[key] = value
-
+                if key == 'taxes' and value:
+                    new_values[key] = [('set', value)]
             return sale_line_obj.write(order_line.id, new_values)
         else:
             values = {
@@ -346,6 +347,8 @@ class Cart(ModelSQL):
             for key, value in values.iteritems():
                 if '.' not in key:
                     new_values[key] = value
+                if key == 'taxes' and value:
+                    new_values[key] = [('set', value)]
             return sale_line_obj.create(new_values)
 
     def delete_from_cart(self, line):
