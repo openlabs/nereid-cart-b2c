@@ -255,7 +255,8 @@ class Cart(ModelSQL):
             'is_cart': True,
             'state': 'draft',
             'website': site.id,
-            'nereid_user': user.id
+            'nereid_user': user.id,
+            'warehouse': request.nereid_website.warehouse.id,
         }
         return sale_obj.create(sale_values)
 

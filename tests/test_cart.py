@@ -52,8 +52,12 @@ class TestCart(TestCase):
             cls.available_currencies = currency_obj.search(
                     [('code', '=', 'USD')]
             )
+            warehouse, = location_obj.search([
+                ('type', '=', 'warehouse')
+            ], limit=1)
             location, = location_obj.search([
-                ('type', '=', 'storage')
+                ('type', '=', 'storage'),
+                ('parent', '=', warehouse)
             ], limit=1)
             cls.site = testing_proxy.create_site(
                 'localhost',
@@ -62,6 +66,7 @@ class TestCart(TestCase):
                 application_user = 1,
                 guest_user = cls.guest_user,
                 stock_location = location,
+                warehouse = warehouse,
             )
 
             # Templates

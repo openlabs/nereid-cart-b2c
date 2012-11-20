@@ -12,6 +12,7 @@ from nereid import render_template, login_required, request
 from nereid.contrib.pagination import Pagination
 from trytond.model import ModelSQL, ModelView, fields
 from trytond.pool import Pool
+from trytond.pyson import Eval
 
 
 class Website(ModelSQL, ModelView):
@@ -20,13 +21,21 @@ class Website(ModelSQL, ModelView):
     """
     _name = 'nereid.website'
 
+    #: The warehouse to be used in the sale order when an order on this site is
+    #: created
+    warehouse = fields.Many2One(
+        'stock.location', 'Warehouse',
+        domain=[('type', '=', 'warehouse')], required=True
+    )
+
     #: Stock location to be used when calculating the stock.
-    #:
-    #: ..versionadded: 2.4.0.4
     stock_location = fields.Many2One(
         'stock.location', 'Stock Location', required=True,
-        domain=[('type', '=', 'storage')],
-        help="Stock location to be used to check availability"
+        depends=['warehouse'],
+        domain=[
+            ('type', '=', 'storage'),
+            ('parent', 'child_of', Eval('warehouse'))
+        ], help="Stock location to be used to check availability"
     )
 
     def __init__(self):

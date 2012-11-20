@@ -14,6 +14,8 @@
               <data>
                   <xpath expr="/form/notebook/page[@id='catalog']/field[@name='categories']" 
                         position="before">
+                          <label name="warehouse"/>
+                          <field name="warehouse"/>
                           <label name="stock_location"/>
                           <field name="stock_location"/>
                   </xpath>
