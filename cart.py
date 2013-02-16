@@ -4,7 +4,7 @@
 
     Cart
 
-    :copyright: (c) 2010-2012 by Openlabs Technologies & Consulting (P) LTD
+    :copyright: (c) 2010-2013 by Openlabs Technologies & Consulting (P) LTD
     :license: GPLv3, see LICENSE for more details
 '''
 from decimal import Decimal
@@ -484,7 +484,7 @@ def login_event_handler(website_obj=None):
     # Find the guest cart
     ids = cart_obj.search([
         ('sessionid', '=', session.sid),
-        ('user', '=', current_app.guest_user),
+        ('user', '=', request.nereid_website.guest_user.id),
         ('website', '=', request.nereid_website.id)
         ], limit=1)
     if not ids:

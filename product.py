@@ -4,7 +4,7 @@
 
     Product Pricelist
 
-    :copyright: (c) 2010-2012 by Openlabs Technologies & Consulting (P) LTD
+    :copyright: (c) 2010-2013 by Openlabs Technologies & Consulting (P) LTD
     :license: GPLv3, see LICENSE for more details
 '''
 from datetime import date
@@ -14,7 +14,6 @@ from trytond.model import ModelSQL, ModelView
 from trytond.transaction import Transaction
 from trytond.pool import Pool
 from nereid import request, cache, jsonify, abort
-from nereid.globals import current_app
 from nereid.helpers import key_from_list
 
 
@@ -45,7 +44,7 @@ class Product(ModelSQL, ModelView):
         # the pricelist of guest user
         if not request.is_guest_user and price_list is None:
             user_obj = Pool().get('nereid.user')
-            guest_user = user_obj.browse(current_app.guest_user)
+            guest_user = request.nereid_website.guest_user
             price_list = guest_user.sale_price_list.id if \
                 guest_user.sale_price_list else None
 
