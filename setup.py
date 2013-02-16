@@ -12,7 +12,7 @@ minor_version = int(minor_version)
 
 requires = ['blinker']
 for dep in info.get('depends', []):
-    if not re.match(r'(ir|res|workflow|webdav|nereid)(\W|$)', dep):
+    if not re.match(r'(ir|res|workflow|webdav)(\W|$)', dep):
         requires.append('trytond_%s >= %s.%s, < %s.%s' %
                 (dep, major_version, minor_version, major_version,
                     minor_version + 1))
@@ -57,4 +57,5 @@ setup(name='trytond_nereid_cart_b2c',
     """,
     test_suite='tests',
     test_loader='trytond.test_loader:Loader',
+    tests_require=['pycountry'],
 )
