@@ -25,14 +25,39 @@ class BaseTestCase(NereidTestCase):
     Test the sale_price method of Product
     """
     def setUp(self):
-        trytond.tests.test_tryton.install_module('nereid_cart_b2c')
+
+        # Install the company module and create a company first 
+        # to avoid a catch 22 situation where the payable and receivable 
+        # accounts are required once the nereid_cart_b2c modules are
+        # installed.
+        trytond.tests.test_tryton.install_module('company')
 
         self.currency_obj = POOL.get('currency.currency')
+        self.company_obj = POOL.get('company.company')
+
+        with Transaction().start(DB_NAME, USER, CONTEXT) as txn:
+            if not self.company_obj.search([]):
+                self.usd = self.currency_obj.create({
+                    'name': 'US Dollar',
+                    'code': 'USD',
+                    'symbol': '$',
+                })
+                self.company = self.company_obj.create({
+                    'name': 'Openlabs',
+                    'currency': self.usd
+                })
+                txn.cursor.commit()
+            else:
+                self.usd, = self.currency_obj.search([])
+                self.company, = self.company_obj.search([])
+
+        # Now install the cart module to be tested
+        trytond.tests.test_tryton.install_module('nereid_cart_b2c')
+
         self.site_obj = POOL.get('nereid.website')
         self.sale_obj = POOL.get('sale.sale')
         self.cart_obj = POOL.get('nereid.cart')
         self.product_obj = POOL.get('product.product')
-        self.company_obj = POOL.get('company.company')
         self.url_map_obj = POOL.get('nereid.url_map')
         self.language_obj = POOL.get('ir.lang')
         self.nereid_website_obj = POOL.get('nereid.website')
@@ -84,7 +109,9 @@ class BaseTestCase(NereidTestCase):
         uom_obj = POOL.get('product.uom')
 
         values['name'] = name
-        values['default_uom'], = uom_obj.search([('name', '=', uom)], limit=1)
+        values['default_uom'] = uom_obj.search(
+            [('name', '=', uom)], limit=1
+        )[0].id
 
         return product_obj.create(values)
 
@@ -125,53 +152,35 @@ class BaseTestCase(NereidTestCase):
         fiscal_year_obj.create_period([fiscal_year])
         return fiscal_year
 
-    def _create_coa_minimal(self, company=None):
+    def _create_coa_minimal(self, company):
         """Create a minimal chart of accounts
         """
         account_template_obj = POOL.get('account.account.template')
         account_obj = POOL.get('account.account')
-        account_journal_obj = POOL.get('account.journal')
-        create_chart_account_obj = POOL.get(
+        account_create_chart = POOL.get(
             'account.create_chart', type="wizard")
-        company_obj = POOL.get('company.company')
 
         account_template, = account_template_obj.search(
-            [('parent', '=', False)])
+            [('parent', '=', None)])
 
-        if company is None:
-            company, = company_obj.search([], limit=1)
+        session_id, _, _ = account_create_chart.create()
+        create_chart = account_create_chart(session_id)
+        create_chart.account.account_template = account_template
+        create_chart.account.company = company
+        create_chart.transition_create_account()
 
-        session_id, start_state, end_state = create_chart_account_obj.create()
-        # Stage 1
-        create_chart_account_obj.execute(session_id, {}, 'start')
-        # Stage 2
-        create_chart_account_obj.execute(session_id, {
-            start_state: {
-                'account_template': account_template,
-                'company': company,
-                }
-            }, 'account')
-        # Stage 3
-        revenue = account_obj.search([
-            ('kind', '=', 'revenue'),
-            ('company', '=', company),
-            ])
-        receivable = account_obj.search([
+        receivable, = account_obj.search([
             ('kind', '=', 'receivable'),
             ('company', '=', company),
             ])
-        payable = account_obj.search([
+        payable, = account_obj.search([
             ('kind', '=', 'payable'),
             ('company', '=', company),
             ])
-        create_chart_account_obj.execute(session_id, {
-            start_state: {
-                'account_receivable': receivable,
-                'account_payable': payable,
-                'account_revenue': revenue,
-                'company': company,
-                }
-            }, 'properties')
+        create_chart.properties.company = company
+        create_chart.properties.account_receivable = receivable
+        create_chart.properties.account_payable = payable
+        create_chart.transition_create_properties()
 
     def _get_account_by_kind(self, kind, company=None, silent=True):
         """Returns an account with given spec
@@ -235,7 +244,7 @@ class BaseTestCase(NereidTestCase):
         self.guest_pl_margin = Decimal('1.20')
         user_price_list = self.pricelist_obj.create({
             'name': 'PL 1',
-            'company': self.company_id,
+            'company': self.company.id,
             'lines': [
                 ('create', {
                     'formula': 'unit_price * %s' % self.party_pl_margin
@@ -244,33 +253,34 @@ class BaseTestCase(NereidTestCase):
         })
         guest_price_list = self.pricelist_obj.create({
             'name': 'PL 2',
-            'company': self.company_id,
+            'company': self.company.id,
             'lines': [
                 ('create', {
                     'formula': 'unit_price * %s' % self.guest_pl_margin
                 })
             ],
         })
-
-        return guest_price_list, user_price_list
+        return guest_price_list.id, user_price_list.id
 
     def setup_defaults(self):
         """
         Setup the defaults
         """
-        usd = self.currency_obj.create({
-            'name': 'US Dollar',
-            'code': 'USD',
-            'symbol': '$',
-        })
-        self.company_id = self.company_obj.create({
-            'name': 'Openlabs',
-            'currency': usd
-        })
-        self.user_obj.write(USER, {
-            'main_company': self.company_id,
-            'company': self.company_id,
-        })
+
+        self.user_obj.write(
+            [self.user_obj(USER)], {
+                'main_company': self.company.id,
+                'company': self.company.id,
+            }
+        )
+        CONTEXT.update(self.user_obj.get_preferences(context_only=True))
+
+        # Create Fiscal Year
+        self._create_fiscal_year(company=self.company.id)
+        # Create Chart of Accounts
+        self._create_coa_minimal(company=self.company.id)
+        # Create a payment term
+        self._create_payment_term()
 
         guest_price_list, user_price_list = self._create_pricelists()
 
@@ -280,7 +290,7 @@ class BaseTestCase(NereidTestCase):
             'display_name': 'Guest User',
             'email': 'guest@openlabs.co.in',
             'password': 'password',
-            'company': self.company_id,
+            'company': self.company.id,
             'sale_price_list': guest_price_list,
         })
         self.registered_user_id = self.nereid_user_obj.create({
@@ -288,7 +298,7 @@ class BaseTestCase(NereidTestCase):
             'display_name': 'Registered User',
             'email': 'email@example.com',
             'password': 'password',
-            'company': self.company_id,
+            'company': self.company.id,
             'sale_price_list': user_price_list,
         })
         self.registered_user_id2 = self.nereid_user_obj.create({
@@ -296,18 +306,11 @@ class BaseTestCase(NereidTestCase):
             'display_name': 'Registered User 2',
             'email': 'email2@example.com',
             'password': 'password2',
-            'company': self.company_id,
+            'company': self.company.id,
         })
 
         self._create_countries()
         self.available_countries = self.country_obj.search([], limit=5)
-
-        # Create Fiscal Year
-        self._create_fiscal_year(company=self.company_id)
-        # Create Chart of Accounts
-        self._create_coa_minimal(company=self.company_id)
-        # Create a payment term
-        self._create_payment_term()
 
         category = self._create_product_category(
             'Category', uri='category'
@@ -323,7 +326,7 @@ class BaseTestCase(NereidTestCase):
         self.nereid_website_obj.create({
             'name': 'localhost',
             'url_map': url_map_id,
-            'company': self.company_id,
+            'company': self.company.id,
             'application_user': USER,
             'default_language': en_us,
             'guest_user': guest_user,
@@ -331,36 +334,36 @@ class BaseTestCase(NereidTestCase):
             'warehouse': warehouse,
             'stock_location': location,
             'categories': [('set', [category])],
-            'currencies': [('set', [usd])],
+            'currencies': [('set', [self.usd])],
         })
 
         self.product = self._create_product(
             'product 1',
-            category=category,
+            category=category.id,
             type = 'goods',
             salable = True,
             list_price = Decimal('10'),
             cost_price = Decimal('5'),
-            account_expense = self._get_account_by_kind('expense'),
-            account_revenue = self._get_account_by_kind('revenue'),
+            account_expense = self._get_account_by_kind('expense').id,
+            account_revenue = self._get_account_by_kind('revenue').id,
             uri = 'product-1',
             sale_uom = self.uom_obj.search(
                 [('name', '=', 'Unit')], limit=1
-            )[0],
+            )[0].id,
         )
         self.product2 = self._create_product(
             'product 2',
-            category=category,
+            category=category.id,
             type = 'goods',
             salable = True,
             list_price = Decimal('15'),
             cost_price = Decimal('5'),
-            account_expense = self._get_account_by_kind('expense'),
-            account_revenue = self._get_account_by_kind('revenue'),
+            account_expense = self._get_account_by_kind('expense').id,
+            account_revenue = self._get_account_by_kind('revenue').id,
             uri = 'product-2',
             sale_uom = self.uom_obj.search(
                 [('name', '=', 'Unit')], limit=1
-            )[0],
+            )[0].id,
         )
 
     def get_template_source(self, name):
@@ -457,7 +460,6 @@ class TestProduct(BaseTestCase):
         Test the availability returned for the products
         """
         stock_move_obj = POOL.get('stock.move')
-        product_obj = POOL.get('product.product')
         website_obj = POOL.get('nereid.website')
         location_obj = POOL.get('stock.location')
 
@@ -471,12 +473,11 @@ class TestProduct(BaseTestCase):
                 self.assertEqual(availability['quantity'], 0.00)
                 self.assertEqual(availability['forecast_quantity'], 0.00)
 
-            product = product_obj.browse(self.product)
-            website = website_obj.browse(website_obj.search([])[0])
+            website, = website_obj.search([])
             supplier_id, = location_obj.search([('code', '=', 'SUP')])
             stock_move_obj.create({
-                'product': product.id,
-                'uom': product.sale_uom.id,
+                'product': self.product.id,
+                'uom': self.product.sale_uom.id,
                 'quantity': 10,
                 'from_location': supplier_id,
                 'to_location': website.stock_location.id,
@@ -486,8 +487,8 @@ class TestProduct(BaseTestCase):
                 'state': 'done'
             })
             stock_move_obj.create({
-                'product': product.id,
-                'uom': product.sale_uom.id,
+                'product': self.product.id,
+                'uom': self.product.sale_uom.id,
                 'quantity': 10,
                 'from_location': supplier_id,
                 'to_location': website.stock_location.id,

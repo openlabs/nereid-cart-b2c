@@ -4,29 +4,33 @@
 
     Sales modules changes to fit nereid
 
-    :copyright: (c) 2010-2012 by Openlabs Technologies & Consulting (P) Ltd.
+    :copyright: (c) 2010-2013 by Openlabs Technologies & Consulting (P) Ltd.
     :license: GPLv3, see LICENSE for more details
 '''
-from trytond.model import ModelView, ModelSQL, fields
+from trytond.pool import PoolMeta
+from trytond.model import fields
+
+__all__ = ['Sale']
+__metaclass__ = PoolMeta
 
 
-class Sale(ModelSQL, ModelView):
+class Sale:
     '''Add a boolean to indicate if the order originated from a shopping cart.
     '''
-    _name = 'sale.sale'
+    __name__ = 'sale.sale'
 
     is_cart = fields.Boolean(
-        'Is Cart Order?', readonly=True, select=1
+        'Is Cart Order?', readonly=True, select=True
     )
     website = fields.Many2One(
-        'nereid.website', 'Website', readonly=True, select=1
+        'nereid.website', 'Website', readonly=True, select=True
     )
-    nereid_user = fields.Many2One('nereid.user', 'Nereid User')
+    nereid_user = fields.Many2One(
+        'nereid.user', 'Nereid User', select=True
+    )
 
     def default_is_cart(self):
         """Dont make this as a default as this would cause orders being placed
         from backend to be placed under default.
         """
         return False
-
-Sale()

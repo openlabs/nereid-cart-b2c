@@ -19,14 +19,17 @@ from werkzeug import redirect
 from babel import numbers
 
 
-from trytond.model import ModelSQL, ModelView, fields
-from trytond.pool import Pool
+from trytond.model import ModelSQL, fields
+from trytond.pool import Pool, PoolMeta
 
 from .forms import AddtoCartForm
 from .i18n import _
 
+__all__ = ['Cart']
+__metaclass__ = PoolMeta
 
 # pylint: disable-msg=E1101
+
 class Cart(ModelSQL):
     """
     Shopping Cart plays the link between a customer's shopping experience
@@ -36,18 +39,18 @@ class Cart(ModelSQL):
     of a cart which is finally converted into a confirmed sale order once
     the process is complete.
     """
-    _name = 'nereid.cart'
-    _description = 'Shopping Cart'
-    _rec_name = 'user'
+    __name__ = 'nereid.cart'
+    _rec_name = 'sessionid'
 
     user = fields.Many2One('nereid.user', 'Cart owner', select=True)
     sale = fields.Many2One('sale.sale', 'Sale Order', select=True)
     sessionid = fields.Char('Session ID', select=True)
     website = fields.Many2One('nereid.website', 'Website', select=True)
 
-    def cart_size(self):
+    @classmethod
+    def cart_size(cls):
         "Returns the sum of quantities in the cart"
-        cart = self.open_cart()
+        cart = cls.open_cart()
         return sum([line.quantity for line in cart.sale.lines]) \
             if cart.sale else Decimal('0')
 
@@ -58,7 +61,8 @@ class Cart(ModelSQL):
         return [(address.id, address.full_address) \
             for address in party.addresses]
 
-    def view_cart(self):
+    @classmethod
+    def view_cart(cls):
         """Returns a view of the shopping cart
 
         This method only handles GET. Unlike previous versions
@@ -67,7 +71,7 @@ class Cart(ModelSQL):
         For XHTTP/Ajax Requests a JSON object with order and lines information
         which should be sufficient to show order information is returned.
         """
-        cart = self.open_cart()
+        cart = cls.open_cart()
 
         if request.is_xhr:
             if not cart.sale:
@@ -98,141 +102,150 @@ class Cart(ModelSQL):
 
         return current_app.response_class(
             render_template('shopping-cart.jinja', cart=cart),
-            headers=[('Cache-Control', 'max-age=0')])
+            headers=[('Cache-Control', 'max-age=0')]
+        )
 
-    def view_cart_esi(self):
+    @classmethod
+    def view_cart_esi(cls):
         """Returns a view of the shopping cart
 
         Similar to :meth:view_cart but for ESI
         """
-        cart = self.open_cart()
+        cart = cls.open_cart()
         return current_app.response_class(
             render_template('shopping-cart-esi.jinja', cart=cart),
-            headers=[('Cache-Control', 'max-age=0')])
+            headers=[('Cache-Control', 'max-age=0')]
+        )
 
-    def _clear_cart(self, cart):
-        sale_obj = Pool().get('sale.sale')
-        if cart.sale:
-            sale_obj.cancel([cart.sale.id])
-            sale_obj.delete(cart.sale.id)
-        self.delete(cart.id)
+    def _clear_cart(self):
+        """
+        Clear the shopping cart by deleting both the sale associated
+        with it and the cart itself.
+        """
+        Sale = Pool().get('sale.sale')
 
-    def clear_cart(self):
+        if self.sale:
+            Sale.cancel([self.sale])
+            Sale.delete([self.sale])
+        self.__class__.delete([self])
+
+    @classmethod
+    def clear_cart(cls):
         """
         Clears the current cart and redirects to shopping cart page
         """
-        cart = self.open_cart()
-        self._clear_cart(cart)
+        cart = cls.open_cart()
+        cart._clear_cart()
         flash(_('Your shopping cart has been cleared'))
         return redirect(url_for('nereid.cart.view_cart'))
 
-    def open_cart(self, create_order=False):
+    @classmethod
+    def open_cart(cls, create_order=False):
         """Logic of this cart functionality is inspired by amazon. Most
         e-commerce systems handle cart in a different way and it is important
         to know how the cart behaves under different circumstances.
 
         :param create_order: If `True` Create a sale order and attach
             if one does not already exist.
-        :return: The browse record for the shopping cart of the user
+        :return: The Active record for the shopping cart of the user
 
         The method is guaranteed to return a cart but the cart may not have
         a sale order. For methods like add to cart which definitely need a sale
         order pass :attr: create_order = True so that an order is also assured.
         """
-        sale_obj = Pool().get('sale.sale')
-        nereid_user_obj = Pool().get('nereid.user')
+        Sale = Pool().get('sale.sale')
+        NereidUser = Pool().get('nereid.user')
 
         # request.nereid_user is not used here this method is used by the 
         # signal handlers immediately after a user logs in (but before being 
         # redirected). This causes the cached property of nereid_user to remain
         # in old value through out the request, which will not  have ended when
         # this method is called.
-        user = nereid_user_obj.browse(
+        user = NereidUser(
             session.get('user', request.nereid_website.guest_user.id)
         )
 
         # for a registered user there is only one cart, session is immaterial
         if 'user' in session:
-            ids = self.search([
+            carts = cls.search([
                 ('sessionid', '=', False),
                 ('user', '=', user.id),
                 ('website', '=', request.nereid_website.id)
             ])
         else:
-            ids = self.search([
+            carts = cls.search([
                 ('sessionid', '=', session.sid),
                 ('user', '=', user.id),
                 ('website', '=', request.nereid_website.id)
                 ], limit=1)
 
-        if not ids:
+        if not carts:
             # Create a cart since it definitely does not exists
-            ids = [self.create({
+            carts = [cls.create({
                 'user': user.id,
                 'website': request.nereid_website.id,
                 'sessionid': session.sid if 'user' not in session else None,
             })]
 
-        cart = self.browse(ids[0])
+        cart, = carts
 
         if cart.sale:
-            self.sanitise_state(cart, user)
+            cart.sanitise_state(user)
 
         # Check if the order needs to be created
         if create_order and not cart.sale:
             # Try any abandoned carts that may exist if user is registered
-            sale_ids = sale_obj.search([
+            sale_orders = Sale.search([
                 ('state', '=', 'draft'),
                 ('is_cart', '=', True),
                 ('website', '=', request.nereid_website.id),
                 ('party', '=', user.party.id),
                 ('currency', '=', request.nereid_currency.id)
                 ], limit=1) if 'user' in session else None
-            self.write(cart.id, {
-                'sale': sale_ids[0] if sale_ids \
-                    else self.create_draft_sale(user)
+            cls.write(
+                [cart], {
+                    'sale': sale_orders[0].id if sale_orders \
+                        else cls.create_draft_sale(user).id
                 })
 
-        return self.browse(ids[0])
+        return cls(cart.id)
 
-    def sanitise_state(self, cart, user):
+    def sanitise_state(self, user):
         """This method verifies that the sale order in the cart is a valid one
         1. for example must not be in any other state than draft
         2. must be of the current currency
         3. must be owned by the given user
 
-        :param cart: browse node of the cart
-        :param user: browse record of the user
+        :param user: Active record of the user
         """
-        if cart.sale:
-            if cart.sale.state != 'draft' or \
-                cart.sale.currency != request.nereid_currency or \
-                cart.sale.party != user.party:
-                self.write(cart.id, {'sale': False})
+        if self.sale:
+            if self.sale.state != 'draft' or \
+                    self.sale.currency != request.nereid_currency or \
+                    self.sale.party != user.party:
+                self.write(self.id, {'sale': False})
 
-    def check_update_date(self, cart):
+    def check_update_date(self):
         """Check if the sale_date is same as today
         If not then update the sale_date with today's date
-
-        :param cart: browse record of the cart
         """
-        date_obj = Pool().get('ir.date')
-        sale_obj = Pool().get('sale.sale')
-        if cart.sale and cart.sale.sale_date \
-                and cart.sale.sale_date < date_obj.today():
-            sale_obj.write(cart.sale.id, {'sale_date': date_obj.today()})
+        Date = Pool().get('ir.date')
+        Sale = Pool().get('sale.sale')
 
-    def create_draft_sale(self, user):
+        if self.sale and self.sale.sale_date \
+                and self.sale.sale_date < Date.today():
+            Sale.write([self.sale], {'sale_date': Date.today()})
+
+    @classmethod
+    def create_draft_sale(cls, user):
         """A helper for the cart which creates a draft order for the given
         user.
 
-        :param user: Browse Record of the user
+        :param user: ActiveRecord of the user
         """
-        sale_obj = Pool().get('sale.sale')
-        nereid_user_obj = Pool().get('nereid.user')
+        Sale = Pool().get('sale.sale')
 
         site = request.nereid_website
-        guest_user = nereid_user_obj.browse(current_app.guest_user)
+        guest_user = request.nereid_website.guest_user
 
         # Get the pricelist of active user, may be regd or guest
         price_list = user.party.sale_price_list.id \
@@ -246,6 +259,8 @@ class Cart(ModelSQL):
 
         # TODO: Evaluate if an error needs to be raised if the pricelist
         # is still not there.
+        if not price_list:
+            raise Exception("There is no pricelist")
 
         sale_values = {
             'party': request.nereid_user.party.id,
@@ -258,9 +273,10 @@ class Cart(ModelSQL):
             'nereid_user': user.id,
             'warehouse': request.nereid_website.warehouse.id,
         }
-        return sale_obj.create(sale_values)
+        return Sale.create(sale_values)
 
-    def add_to_cart(self):
+    @classmethod
+    def add_to_cart(cls):
         """
         Adds the given item to the cart if it exists or to a new cart
 
@@ -276,14 +292,14 @@ class Cart(ModelSQL):
         """
         form = AddtoCartForm(request.form)
         if request.method == 'POST' and form.validate():
-            cart = self.open_cart(create_order=True)
+            cart = cls.open_cart(create_order=True)
             action = request.values.get('action', 'set')
             if form.quantity.data <= 0:
                 flash(
                     _('Be sensible! You can only add real quantities to cart')
                 )
                 return redirect(url_for('nereid.cart.view_cart'))
-            self._add_or_update(
+            cls._add_or_update(
                 cart.sale.id, form.product.data, form.quantity.data, action
             )
             if action == 'add':
@@ -295,7 +311,8 @@ class Cart(ModelSQL):
 
         return redirect(url_for('nereid.cart.view_cart'))
 
-    def _add_or_update(self, sale_id, product_id, quantity, action='set'):
+    @classmethod
+    def _add_or_update(cls, sale_id, product_id, quantity, action='set'):
         '''Add item as a line or if a line with item exists
         update it for the quantity
 
@@ -305,14 +322,14 @@ class Cart(ModelSQL):
         :param action: set - set the quantity to the given quantity
                        add - add quantity to existing quantity
         '''
-        sale_line_obj = Pool().get('sale.line')
-        sale_obj = Pool().get('sale.sale')
+        SaleLine = Pool().get('sale.line')
+        Sale = Pool().get('sale.sale')
 
-        sale = sale_obj.browse(sale_id)
-        ids = sale_line_obj.search([
+        sale = Sale(sale_id)
+        lines = SaleLine.search([
             ('sale', '=', sale.id), ('product', '=', product_id)])
-        if ids:
-            order_line = sale_line_obj.browse(ids[0])
+        if lines:
+            order_line = lines[0]
             values = {
                 'product': product_id,
                 '_parent_sale.currency': sale.currency.id,
@@ -321,9 +338,9 @@ class Cart(ModelSQL):
                 'unit': order_line.unit.id,
                 'quantity': quantity if action == 'set' \
                         else quantity + order_line.quantity,
-                'type': 'line'
+                'type': 'line',
                 }
-            values.update(sale_line_obj.on_change_quantity(values))
+            values.update(SaleLine(**values).on_change_quantity())
 
             new_values = { }
             for key, value in values.iteritems():
@@ -331,7 +348,8 @@ class Cart(ModelSQL):
                     new_values[key] = value
                 if key == 'taxes' and value:
                     new_values[key] = [('set', value)]
-            return sale_line_obj.write(order_line.id, new_values)
+            SaleLine.write([order_line], new_values)
+            return order_line
         else:
             values = {
                 'product': product_id,
@@ -341,18 +359,21 @@ class Cart(ModelSQL):
                 'sale': sale.id,
                 'type': 'line',
                 'quantity': quantity,
+                'unit': None,
+                'description': None,
                 }
-            values.update(sale_line_obj.on_change_product(values))
-            values.update(sale_line_obj.on_change_quantity(values))
+            values.update(SaleLine(**values).on_change_product())
+            values.update(SaleLine(**values).on_change_quantity())
             new_values = { }
             for key, value in values.iteritems():
                 if '.' not in key:
                     new_values[key] = value
                 if key == 'taxes' and value:
                     new_values[key] = [('set', value)]
-            return sale_line_obj.create(new_values)
+            return SaleLine.create(new_values)
 
-    def delete_from_cart(self, line):
+    @classmethod
+    def delete_from_cart(cls, line):
         """
         Delete a line from the cart. The required argument in POST is:
 
@@ -360,11 +381,11 @@ class Cart(ModelSQL):
 
         Response: 'OK' if X-HTTPRequest else redirect to shopping cart
         """
-        sale_line_obj = Pool().get('sale.line')
+        SaleLine = Pool().get('sale.line')
 
-        sale_line = sale_line_obj.browse(line)
-        assert sale_line.sale.id == self.open_cart().sale.id
-        sale_line_obj.delete(line)
+        sale_line = SaleLine(line)
+        assert sale_line.sale.id == cls.open_cart().sale.id
+        SaleLine.delete([sale_line])
         flash(_('The order item has been successfully removed'))
 
         if request.is_xhr:
@@ -372,7 +393,8 @@ class Cart(ModelSQL):
 
         return redirect(url_for('nereid.cart.view_cart'))
 
-    def context_processor(self):
+    @classmethod
+    def context_processor(cls):
         """This function will be called by nereid to update
         the template context. Must return a dictionary that the context
         will be updated with.
@@ -381,75 +403,9 @@ class Cart(ModelSQL):
         in xml code
         """
         return {
-            'get_cart_size': self.cart_size,
-            'get_cart': self.open_cart,
-            }
-
-Cart()
-
-
-class Website(ModelSQL, ModelView):
-    """Set Currency behaviour change"""
-    _name = 'nereid.website'
-
-    def set_currency(self):
-        """Sets the currency for current session. A change in the currency
-        should reset the cart if the currency of the cart is not the same as
-        the one here
-        """
-        cart_obj = Pool().get('nereid.cart')
-
-        rv = super(Website, self).set_currency()
-
-        # If currency has changed drop the cart
-        # This behaviour needs serious improvement. Probably create a new cart
-        # with all items in this cart and then drop this one
-        cart = cart_obj.open_cart()
-        if cart.sale and cart.sale.currency.id != session['currency']:
-            cart_obj.clear_cart()
-
-        return rv
-
-    def _user_status(self):
-        """Add cart size and amount to the dictionary
-        """
-        cart_obj = Pool().get('nereid.cart')
-        cart = cart_obj.open_cart()
-
-        rv = super(Website, self)._user_status()
-
-        if cart.sale:
-            # Build locale based formatters
-            currency_format = partial(
-                numbers.format_currency, currency=cart.sale.currency.code,
-                locale=request.nereid_language.code
-            )
-            number_format = partial(
-                numbers.format_number, locale=request.nereid_language.code
-            )
-
-            rv['cart'] = {
-                'lines': [{
-                    'product': l.product.name,
-                    'quantity': number_format(l.quantity),
-                    'unit': l.unit.symbol,
-                    'unit_price': currency_format(l.unit_price),
-                    'amount': currency_format(l.amount),
-                } for l in cart.sale.lines],
-                'empty': len(cart.sale.lines) > 0,
-                'total_amount': currency_format(cart.sale.total_amount),
-                'tax_amount': currency_format(cart.sale.tax_amount),
-                'untaxed_amount': currency_format(cart.sale.untaxed_amount),
-            }
-            rv['cart_total_amount'] = currency_format(
-                cart.sale and cart.sale.total_amount or 0
-            )
-
-        rv['cart_size'] = '%s' % cart_obj.cart_size()
-
-        return rv
-
-Website()
+            'get_cart_size': cls.cart_size,
+            'get_cart': cls.open_cart,
+        }
 
 
 @login.connect
@@ -471,7 +427,7 @@ def login_event_handler(website_obj=None):
             "Version 2.5 +", DeprecationWarning, stacklevel=2)
 
     try:
-        cart_obj = Pool().get('nereid.cart')
+        Cart = Pool().get('nereid.cart')
     except KeyError:
         # Just return silently. This KeyError is cause if the module is not
         # installed for a specific database but exists in the python path
@@ -482,22 +438,23 @@ def login_event_handler(website_obj=None):
         return
 
     # Find the guest cart
-    ids = cart_obj.search([
-        ('sessionid', '=', session.sid),
-        ('user', '=', request.nereid_website.guest_user.id),
-        ('website', '=', request.nereid_website.id)
-        ], limit=1)
-    if not ids:
+    try:
+        guest_cart, = Cart.search([
+            ('sessionid', '=', session.sid),
+            ('user', '=', request.nereid_website.guest_user.id),
+            ('website', '=', request.nereid_website.id)
+            ], limit=1)
+    except ValueError:
         return
 
     # There is a cart
-    guest_cart = cart_obj.browse(ids[0])
     if guest_cart.sale and guest_cart.sale.lines:
-        to_cart = cart_obj.open_cart(True)
+        to_cart = Cart.open_cart(True)
         # Transfer lines from one cart to another
         for from_line in guest_cart.sale.lines:
-            cart_obj._add_or_update(
-                to_cart.sale.id, from_line.product.id, from_line.quantity)
+            Cart._add_or_update(
+                to_cart.sale.id, from_line.product.id, from_line.quantity
+            )
 
     # Clear and delete the old cart
-    cart_obj._clear_cart(guest_cart)
+    guest_cart._clear_cart()
