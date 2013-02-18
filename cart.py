@@ -54,6 +54,7 @@ class Cart(ModelSQL):
         return sum([line.quantity for line in cart.sale.lines]) \
             if cart.sale else Decimal('0')
 
+    @classmethod
     @login_required
     def _get_addresses(self):
         'Returns a list of tuple of addresses'
