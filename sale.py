@@ -29,7 +29,8 @@ class Sale:
         'nereid.user', 'Nereid User', select=True
     )
 
-    def default_is_cart(self):
+    @staticmethod
+    def default_is_cart():
         """Dont make this as a default as this would cause orders being placed
         from backend to be placed under default.
         """

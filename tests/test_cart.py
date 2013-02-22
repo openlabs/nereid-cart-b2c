@@ -316,6 +316,20 @@ class TestCart(BaseTestCase):
                 self.assertEqual(rv.status_code, 200)
                 self.assertEqual(rv.data, 'Cart:1,10,100.00')
 
+    def test_0090_create_sale_order(self):
+        """
+        Create a sale order and it should work
+        """
+        with Transaction().start(DB_NAME, USER, CONTEXT):
+            self.setup_defaults()
+
+            sale = self.sale_obj.create({
+                'party': self.registered_user_id.party.id,
+                'company': self.company.id,
+                'currency': self.usd.id,
+            })
+            self.assertEqual(sale.party, self.registered_user_id.party)
+
 
 def suite():
     "Cart test suite"
