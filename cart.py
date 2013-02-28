@@ -56,7 +56,7 @@ class Cart(ModelSQL):
 
     @classmethod
     @login_required
-    def _get_addresses(self):
+    def _get_addresses(cls):
         'Returns a list of tuple of addresses'
         party = request.nereid_user.party
         return [(address.id, address.full_address) \
