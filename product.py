@@ -56,14 +56,15 @@ class Product:
             price_list, self.id, quantity,
             request.nereid_currency.id,
             'product.product.sale_price',
-            ])
+        ])
         price = cache.get(cache_key)
         if price is None:
             # There is a valid pricelist, now get the price
             with Transaction().set_context(
-                    customer = request.nereid_user.party.id,
-                    price_list = price_list,
-                    currency = request.nereid_currency.id):
+                customer=request.nereid_user.party.id,
+                price_list=price_list,
+                currency=request.nereid_currency.id
+            ):
                 price = self.get_sale_price([self], quantity)[self.id]
 
             # Now convert the price to the session currency
@@ -91,10 +92,10 @@ class Product:
         }
         with Transaction().set_context(**context):
             return {
-                'quantity':
-                    self.get_quantity([self], 'quantity')[self.id],
-                'forecast_quantity':
-                    self.get_quantity([self], 'forecast_quantity')[self.id],
+                'quantity': self.get_quantity([self], 'quantity')[self.id],
+                'forecast_quantity': self.get_quantity(
+                    [self], 'forecast_quantity'
+                )[self.id],
             }
 
     @classmethod
@@ -126,8 +127,7 @@ class Product:
                 ('displayed_on_eshop', '=', True),
                 ('uri', '=', uri),
                 ('category', 'in', allowed_categories),
-                ]
-            )
+            ])
         except ValueError:
             return abort(404)
 

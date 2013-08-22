@@ -26,8 +26,8 @@ class BaseTestCase(NereidTestCase):
     """
     def setUp(self):
 
-        # Install the company module and create a company first 
-        # to avoid a catch 22 situation where the payable and receivable 
+        # Install the company module and create a company first
+        # to avoid a catch 22 situation where the payable and receivable
         # accounts are required once the nereid_cart_b2c modules are
         # installed.
         trytond.tests.test_tryton.install_module('company')
@@ -133,7 +133,7 @@ class BaseTestCase(NereidTestCase):
             'name': '%s' % date.year,
             'code': 'account.invoice',
             'company': company,
-            })
+        })
         fiscal_year = fiscal_year_obj.create({
             'name': '%s' % date.year,
             'start_date': date + relativedelta(month=1, day=1),
@@ -143,12 +143,12 @@ class BaseTestCase(NereidTestCase):
                 'name': '%s' % date.year,
                 'code': 'account.move',
                 'company': company,
-                }),
+            }),
             'out_invoice_sequence': invoice_sequence,
             'in_invoice_sequence': invoice_sequence,
             'out_credit_note_sequence': invoice_sequence,
             'in_credit_note_sequence': invoice_sequence,
-            })
+        })
         fiscal_year_obj.create_period([fiscal_year])
         return fiscal_year
 
@@ -161,7 +161,8 @@ class BaseTestCase(NereidTestCase):
             'account.create_chart', type="wizard")
 
         account_template, = account_template_obj.search(
-            [('parent', '=', None)])
+            [('parent', '=', None)]
+        )
 
         session_id, _, _ = account_create_chart.create()
         create_chart = account_create_chart(session_id)
@@ -172,11 +173,11 @@ class BaseTestCase(NereidTestCase):
         receivable, = account_obj.search([
             ('kind', '=', 'receivable'),
             ('company', '=', company),
-            ])
+        ])
         payable, = account_obj.search([
             ('kind', '=', 'payable'),
             ('company', '=', company),
-            ])
+        ])
         create_chart.properties.company = company
         create_chart.properties.account_receivable = receivable
         create_chart.properties.account_payable = payable
@@ -197,7 +198,7 @@ class BaseTestCase(NereidTestCase):
         account_ids = account_obj.search([
             ('kind', '=', kind),
             ('company', '=', company)
-            ], limit=1)
+        ], limit=1)
         if not account_ids and not silent:
             raise Exception("Account not found")
         return account_ids[0] if account_ids else False
@@ -340,28 +341,28 @@ class BaseTestCase(NereidTestCase):
         self.product = self._create_product(
             'product 1',
             category=category.id,
-            type = 'goods',
-            salable = True,
-            list_price = Decimal('10'),
-            cost_price = Decimal('5'),
-            account_expense = self._get_account_by_kind('expense').id,
-            account_revenue = self._get_account_by_kind('revenue').id,
-            uri = 'product-1',
-            sale_uom = self.uom_obj.search(
+            type='goods',
+            salable=True,
+            list_price=Decimal('10'),
+            cost_price=Decimal('5'),
+            account_expense=self._get_account_by_kind('expense').id,
+            account_revenue=self._get_account_by_kind('revenue').id,
+            uri='product-1',
+            sale_uom=self.uom_obj.search(
                 [('name', '=', 'Unit')], limit=1
             )[0].id,
         )
         self.product2 = self._create_product(
             'product 2',
             category=category.id,
-            type = 'goods',
-            salable = True,
-            list_price = Decimal('15'),
-            cost_price = Decimal('5'),
-            account_expense = self._get_account_by_kind('expense').id,
-            account_revenue = self._get_account_by_kind('revenue').id,
-            uri = 'product-2',
-            sale_uom = self.uom_obj.search(
+            type='goods',
+            salable=True,
+            list_price=Decimal('15'),
+            cost_price=Decimal('5'),
+            account_expense=self._get_account_by_kind('expense').id,
+            account_revenue=self._get_account_by_kind('revenue').id,
+            uri='product-2',
+            sale_uom=self.uom_obj.search(
                 [('name', '=', 'Unit')], limit=1
             )[0].id,
         )
@@ -386,16 +387,19 @@ class BaseTestCase(NereidTestCase):
                         ensured. If the login failed an assertion error would
                         be raised
         """
-        rv = client.post('/en_US/login', data={
-            'email': username,
-            'password': password,
-            })
+        rv = client.post(
+            '/en_US/login', data={
+                'email': username,
+                'password': password,
+            }
+        )
         if assert_:
             self.assertEqual(rv.status_code, 302)
         return rv
 
 
 class TestProduct(BaseTestCase):
+    "Test Product"
 
     def test_0010_test_guest_price(self):
         """
@@ -424,7 +428,7 @@ class TestProduct(BaseTestCase):
             app = self.get_app()
 
             with app.test_client() as c:
-                # Use the partner 
+                # Use the partner
                 self.login(c, 'email@example.com', 'password')
                 rv = c.get('/en_US/product/product-1')
                 self.assertEqual(
@@ -452,7 +456,7 @@ class TestProduct(BaseTestCase):
                 )
                 rv = c.get('/en_US/product/product-2')
                 self.assertEqual(
-                    Decimal(rv.data), Decimal('15') *  self.guest_pl_margin
+                    Decimal(rv.data), Decimal('15') * self.guest_pl_margin
                 )
 
     def test_0040_availability(self):
@@ -511,7 +515,7 @@ def suite():
     suite = unittest.TestSuite()
     suite.addTests([
         unittest.TestLoader().loadTestsFromTestCase(TestProduct),
-        ])
+    ])
     return suite
 
 

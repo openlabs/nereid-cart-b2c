@@ -15,6 +15,7 @@ from trytond.model import fields
 from trytond.pool import Pool, PoolMeta
 from trytond.pyson import Eval
 
+
 __all__ = ['Website']
 __metaclass__ = PoolMeta
 
@@ -51,7 +52,7 @@ class Website:
     def account_context(cls):
         """
         When the account page is displayed it may be required to display a
-        lot of information, and this depends from site to site. So rather than 
+        lot of information, and this depends from site to site. So rather than
         rewriting the render page everytime it is optimal to have a context
         being rebuilt by subclassing.
 
@@ -70,24 +71,24 @@ class Website:
         sales = Pagination(Sale, [
             ('party', '=', request.nereid_user.party.id),
             ('state', '!=', 'draft')
-            ], 1, 5)
+        ], 1, 5)
 
         invoices = Pagination(Invoice, [
             ('party', '=', request.nereid_user.party.id),
             ('state', '!=', 'draft'),
-            ], 1, 5)
+        ], 1, 5)
 
         shipments = Pagination(Shipment, [
             ('customer', '=', request.nereid_user.party.id),
             ('state', '!=', 'draft'),
-            ], 1, 5)
+        ], 1, 5)
 
         context = super(Website, cls).account_context()
         context.update({
             'sales': sales,
             'invoices': invoices,
             'shipments': shipments,
-            })
+        })
         return context
 
     @classmethod
@@ -99,9 +100,10 @@ class Website:
         invoices = account_context.get('invoices')
         shipments = account_context.get('shipments')
         return render_template(
-            'account.jinja', sales = sales,
-            invoices = invoices, shipments = shipments,
-            user = request.nereid_user)
+            'account.jinja', sales=sales,
+            invoices=invoices, shipments=shipments,
+            user=request.nereid_user
+        )
 
     @classmethod
     @login_required
@@ -111,7 +113,7 @@ class Website:
         sales = Pagination(Sale, [
             ('party', '=', request.nereid_user.party.id),
             ('state', '!=', 'draft')
-            ], page, cls.per_page)
+        ], page, cls.per_page)
         return render_template('sales.jinja', sales=sales)
 
     @classmethod
@@ -122,7 +124,7 @@ class Website:
         invoices = Pagination(Invoice, [
             ('party', '=', request.nereid_user.party.id),
             ('state', '!=', 'draft')
-            ], page, cls.per_page)
+        ], page, cls.per_page)
         return render_template('invoices.jinja', invoices=invoices)
 
     @classmethod
@@ -133,7 +135,7 @@ class Website:
         shipments = Pagination(Shipment, [
             ('customer', '=', request.nereid_user.party.id),
             ('state', '!=', 'draft'),
-            ], page, cls.per_page)
+        ], page, cls.per_page)
         return render_template('shipments.jinja', shipments=shipments)
 
     @classmethod
