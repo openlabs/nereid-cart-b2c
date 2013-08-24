@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-#This file is part of Tryton and Nereid.  The COPYRIGHT file at the top level of
+#This file is part of Tryton and Nereid. The COPYRIGHT file at the top level of
 #this repository contains the full copyright notices and license terms.
 import unittest
 
@@ -13,7 +13,7 @@ def suite():
     suite.addTests([
         unittest.TestLoader().loadTestsFromTestCase(TestCart),
         unittest.TestLoader().loadTestsFromTestCase(TestProduct),
-        ])
+    ])
     return suite
 
 
