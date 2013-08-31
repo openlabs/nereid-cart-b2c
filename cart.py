@@ -30,6 +30,7 @@ __metaclass__ = PoolMeta
 
 # pylint: disable-msg=E1101
 
+
 class Cart(ModelSQL):
     """
     Shopping Cart plays the link between a customer's shopping experience
@@ -56,11 +57,12 @@ class Cart(ModelSQL):
 
     @classmethod
     @login_required
-    def _get_addresses(self):
+    def _get_addresses(cls):
         'Returns a list of tuple of addresses'
         party = request.nereid_user.party
-        return [(address.id, address.full_address) \
-            for address in party.addresses]
+        return [
+            (address.id, address.full_address) for address in party.addresses
+        ]
 
     @classmethod
     def view_cart(cls):
@@ -157,8 +159,8 @@ class Cart(ModelSQL):
         Sale = Pool().get('sale.sale')
         NereidUser = Pool().get('nereid.user')
 
-        # request.nereid_user is not used here this method is used by the 
-        # signal handlers immediately after a user logs in (but before being 
+        # request.nereid_user is not used here this method is used by the
+        # signal handlers immediately after a user logs in (but before being
         # redirected). This causes the cached property of nereid_user to remain
         # in old value through out the request, which will not  have ended when
         # this method is called.
@@ -178,7 +180,7 @@ class Cart(ModelSQL):
                 ('sessionid', '=', session.sid),
                 ('user', '=', user.id),
                 ('website', '=', request.nereid_website.id)
-                ], limit=1)
+            ], limit=1)
 
         if not carts:
             # Create a cart since it definitely does not exists
@@ -202,12 +204,13 @@ class Cart(ModelSQL):
                 ('website', '=', request.nereid_website.id),
                 ('party', '=', user.party.id),
                 ('currency', '=', request.nereid_currency.id)
-                ], limit=1) if 'user' in session else None
+            ], limit=1) if 'user' in session else None
             cls.write(
                 [cart], {
-                    'sale': sale_orders[0].id if sale_orders \
-                        else cls.create_draft_sale(user).id
-                })
+                    'sale': sale_orders[0].id if sale_orders
+                            else cls.create_draft_sale(user).id
+                }
+            )
 
         return cls(cart.id)
 
@@ -250,13 +253,13 @@ class Cart(ModelSQL):
 
         # Get the pricelist of active user, may be regd or guest
         price_list = user.party.sale_price_list.id \
-                if user.party.sale_price_list else None
+            if user.party.sale_price_list else None
 
         # If the regsitered user does not have a pricelist try for
         # the pricelist of guest user
         if (guest_user != user) and price_list is None:
             price_list = guest_user.party.sale_price_list.id \
-                    if guest_user.party.sale_price_list else None
+                if guest_user.party.sale_price_list else None
 
         # TODO: Evaluate if an error needs to be raised if the pricelist
         # is still not there.
@@ -337,13 +340,13 @@ class Cart(ModelSQL):
                 '_parent_sale.party': sale.party.id,
                 '_parent_sale.price_list': sale.price_list.id,
                 'unit': order_line.unit.id,
-                'quantity': quantity if action == 'set' \
-                        else quantity + order_line.quantity,
+                'quantity': quantity if action == 'set'
+                    else quantity + order_line.quantity,
                 'type': 'line',
-                }
+            }
             values.update(SaleLine(**values).on_change_quantity())
 
-            new_values = { }
+            new_values = {}
             for key, value in values.iteritems():
                 if '.' not in key:
                     new_values[key] = value
@@ -362,10 +365,10 @@ class Cart(ModelSQL):
                 'quantity': quantity,
                 'unit': None,
                 'description': None,
-                }
+            }
             values.update(SaleLine(**values).on_change_product())
             values.update(SaleLine(**values).on_change_quantity())
-            new_values = { }
+            new_values = {}
             for key, value in values.iteritems():
                 if '.' not in key:
                     new_values[key] = value
@@ -414,7 +417,7 @@ def login_event_handler(website_obj=None):
     """This method is triggered when a login event occurs.
 
     When a user logs in, all items in his guest cart should be added to his
-    logged in or registered cart. If there is no such cart, it should be 
+    logged in or registered cart. If there is no such cart, it should be
     created.
 
     .. versionchanged:: 2.4.0.1
@@ -424,8 +427,10 @@ def login_event_handler(website_obj=None):
     """
 
     if website_obj is not None:
-        warnings.warn("login_event_handler will not accept arguments from "
-            "Version 2.5 +", DeprecationWarning, stacklevel=2)
+        warnings.warn(
+            "login_event_handler will not accept arguments from "
+            "Version 2.5 +", DeprecationWarning, stacklevel=2
+        )
 
     try:
         Cart = Pool().get('nereid.cart')
@@ -444,7 +449,7 @@ def login_event_handler(website_obj=None):
             ('sessionid', '=', session.sid),
             ('user', '=', request.nereid_website.guest_user.id),
             ('website', '=', request.nereid_website.id)
-            ], limit=1)
+        ], limit=1)
     except ValueError:
         return
 

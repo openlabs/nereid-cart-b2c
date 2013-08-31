@@ -9,10 +9,10 @@
 '''
 from trytond.pool import Pool
 
-from .product import *
-from .sale import *
-from .cart import *
-from .website import *
+from product import Product
+from sale import Sale
+from cart import Cart
+from website import Website
 
 
 def register():
