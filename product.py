@@ -38,15 +38,15 @@ class Product:
 
         :param quantity: Quantity
         """
-        price_list = request.nereid_user.sale_price_list.id if \
-            request.nereid_user.sale_price_list else None
+        price_list = request.nereid_user.party.sale_price_list.id if \
+            request.nereid_user.party.sale_price_list else None
 
         # If the registered user does not have a pricelist try for
         # the pricelist of guest user
         if not request.is_guest_user and price_list is None:
             guest_user = request.nereid_website.guest_user
-            price_list = guest_user.sale_price_list.id if \
-                guest_user.sale_price_list else None
+            price_list = guest_user.party.sale_price_list.id if \
+                guest_user.party.sale_price_list else None
 
         # Build a Cache key to store in cache
         cache_key = key_from_list([

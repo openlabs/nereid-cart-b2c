@@ -184,11 +184,11 @@ class Cart(ModelSQL):
 
         if not carts:
             # Create a cart since it definitely does not exists
-            carts = [cls.create({
+            carts = cls.create([{
                 'user': user.id,
                 'website': request.nereid_website.id,
                 'sessionid': session.sid if 'user' not in session else None,
-            })]
+            }])
 
         cart, = carts
 
@@ -226,7 +226,7 @@ class Cart(ModelSQL):
             if self.sale.state != 'draft' or \
                     self.sale.currency != request.nereid_currency or \
                     self.sale.party != user.party:
-                self.write(self.id, {'sale': False})
+                self.write([self], {'sale': None})
 
     def check_update_date(self):
         """Check if the sale_date is same as today
@@ -277,7 +277,7 @@ class Cart(ModelSQL):
             'nereid_user': user.id,
             'warehouse': request.nereid_website.warehouse.id,
         }
-        return Sale.create(sale_values)
+        return Sale.create([sale_values])[0]
 
     @classmethod
     def add_to_cart(cls):
@@ -374,7 +374,7 @@ class Cart(ModelSQL):
                     new_values[key] = value
                 if key == 'taxes' and value:
                     new_values[key] = [('set', value)]
-            return SaleLine.create(new_values)
+            return SaleLine.create([new_values])[0]
 
     @classmethod
     def delete_from_cart(cls, line):
