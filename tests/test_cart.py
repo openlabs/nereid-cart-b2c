@@ -26,29 +26,33 @@ class TestCart(BaseTestCase):
         # Setup the pricelists
         self.party_pl_margin = Decimal('1')
         self.guest_pl_margin = Decimal('1')
-        user_price_list = self.pricelist_obj.create({
+        user_price_list, = self.PriceList.create([{
             'name': 'PL 1',
             'company': self.company.id,
             'lines': [
-                ('create', {
+                ('create', [{
                     'formula': 'unit_price * %s' % self.party_pl_margin
-                })
+                }])
             ],
-        })
-        guest_price_list = self.pricelist_obj.create({
+        }])
+        guest_price_list, = self.PriceList.create([{
             'name': 'PL 2',
             'company': self.company.id,
             'lines': [
-                ('create', {
+                ('create', [{
                     'formula': 'unit_price * %s' % self.guest_pl_margin
-                })
+                }])
             ],
-        })
+        }])
         return guest_price_list.id, user_price_list.id
 
     def setup_defaults(self):
         super(TestCart, self).setup_defaults()
-        self.product_obj.write([self.product2], {'list_price': Decimal('10')})
+        self.ProductTemplate.write(
+            [self.template2], {
+                'list_price': Decimal('10')
+            }
+        )
 
     def test_0010_cart_wo_login(self):
         """
@@ -71,36 +75,42 @@ class TestCart(BaseTestCase):
                 c.post(
                     '/en_US/cart/add',
                     data={
-                        'product': self.product.id,
+                        'product': self.product1.id,
                         'quantity': quantity,
                     }
                 )
                 rv = c.get('/en_US/cart')
                 self.assertEqual(rv.status_code, 200)
 
-            sales = self.sale_obj.search([])
+            sales = self.Sale.search([])
             self.assertEqual(len(sales), 1)
             sale = sales[0]
             self.assertEqual(len(sale.lines), 1)
-            self.assertEqual(sale.lines[0].product.id, self.product.id)
+            self.assertEqual(
+                sale.lines[0].product, self.product1
+            )
             self.assertEqual(sale.lines[0].quantity, quantity)
 
     def test_0020_cart_diff_apps(self):
-        """Call the cart with two different applications
-        and assert they are not equal"""
+        """
+        Call the cart with two different applications
+        and assert they are not equal
+        """
         with Transaction().start(DB_NAME, USER, CONTEXT):
             self.setup_defaults()
             app = self.get_app()
 
             with app.test_client() as c1:
                 rv1 = c1.get('/en_US/cart')
+                self.assertEqual(rv1.status_code, 200)
+                data1 = rv1.data
 
-            self.assertEqual(rv1.status_code, 200)
             with app.test_client() as c2:
                 rv2 = c2.get('/en_US/cart')
                 self.assertEqual(rv2.status_code, 200)
+                data2 = rv2.data
 
-        self.assertTrue(rv1.data != rv2.data)
+        self.assertTrue(data1 != data2)
 
     def test_0030_add_items_n_login(self):
         """User browses cart, adds items and logs in
@@ -118,7 +128,7 @@ class TestCart(BaseTestCase):
                 c.post(
                     '/en_US/cart/add',
                     data={
-                        'product': self.product.id, 'quantity': 5
+                        'product': self.product1.id, 'quantity': 5
                     }
                 )
                 rv = c.get('/en_US/cart')
@@ -147,7 +157,7 @@ class TestCart(BaseTestCase):
                 c.post(
                     '/en_US/cart/add',
                     data={
-                        'product': self.product.id, 'quantity': 7
+                        'product': self.product1.id, 'quantity': 7
                     }
                 )
                 rv = c.get('/en_US/cart')
@@ -155,7 +165,7 @@ class TestCart(BaseTestCase):
                 self.assertEqual(rv.data, 'Cart:1,7,70.00')
 
                 c.post('/en_US/cart/add', data={
-                    'product': self.product.id, 'quantity': 7
+                    'product': self.product1.id, 'quantity': 7
                 })
                 rv = c.get('/en_US/cart')
                 self.assertEqual(rv.status_code, 200)
@@ -164,7 +174,7 @@ class TestCart(BaseTestCase):
                 c.post(
                     '/en_US/cart/add',
                     data={
-                        'product': self.product.id,
+                        'product': self.product1.id,
                         'quantity': 7, 'action': 'add'
                     }
                 )
@@ -191,7 +201,7 @@ class TestCart(BaseTestCase):
                 c.post(
                     '/en_US/cart/add',
                     data={
-                        'product': self.product.id, 'quantity': 7
+                        'product': self.product1.id, 'quantity': 7
                     }
                 )
                 rv = c.get('/en_US/cart')
@@ -217,7 +227,10 @@ class TestCart(BaseTestCase):
 
                 rv = c.post(
                     '/en_US/cart/add',
-                    data={'product': self.product.id, 'quantity': 6}
+                    data={
+                        'product': self.product1.id,
+                        'quantity': 6
+                    }
                 )
                 self.assertEqual(rv.status_code, 302)
                 rv = c.get('/en_US/cart')
@@ -244,14 +257,20 @@ class TestCart(BaseTestCase):
                 # Add 6 of first product
                 rv = c.post(
                     '/en_US/cart/add',
-                    data={'product': self.product.id, 'quantity': 6}
+                    data={
+                        'product': self.product1.id,
+                        'quantity': 6
+                    }
                 )
                 self.assertEqual(rv.status_code, 302)
 
                 # Add 10 of next product
                 rv = c.post(
                     '/en_US/cart/add',
-                    data={'product': self.product2.id, 'quantity': 10}
+                    data={
+                        'product': self.template2.products[0].id,
+                        'quantity': 10
+                    }
                 )
                 self.assertEqual(rv.status_code, 302)
 
@@ -260,9 +279,9 @@ class TestCart(BaseTestCase):
                 self.assertEqual(rv.data, 'Cart:1,16,160.00')
 
                 # Find the line with product1 and delete it
-                cart = self.cart_obj(1)
+                cart = self.Cart(1)
                 for line in cart.sale.lines:
-                    if line.product.id == self.product.id:
+                    if line.product.id == self.product1.id:
                         break
                 else:
                     self.fail("Order line not found")
@@ -288,11 +307,14 @@ class TestCart(BaseTestCase):
                 # Add 6 of first product
                 rv = c.post(
                     '/en_US/cart/add',
-                    data={'product': self.product.id, 'quantity': 6}
+                    data={
+                        'product': self.product1.id,
+                        'quantity': 6
+                    }
                 )
                 self.assertEqual(rv.status_code, 302)
 
-            cart = self.cart_obj(1)
+            cart = self.Cart(1)
             sale = cart.sale.id
 
             with app.test_client() as c:
@@ -302,7 +324,7 @@ class TestCart(BaseTestCase):
                 self.assertEqual(rv.status_code, 200)
                 self.assertEqual(rv.data, 'Cart:2,0,')
 
-            self.assertFalse(self.sale_obj.search([('id', '=', sale)]))
+            self.assertFalse(self.Sale.search([('id', '=', sale)]))
 
     def test_0080_reject_negative_quantity(self):
         """
@@ -316,7 +338,10 @@ class TestCart(BaseTestCase):
                 self.login(c, 'email2@example.com', 'password2')
                 rv = c.post(
                     '/en_US/cart/add',
-                    data={'product': self.product2.id, 'quantity': 10}
+                    data={
+                        'product': self.template2.products[0].id,
+                        'quantity': 10
+                    }
                 )
                 self.assertEqual(rv.status_code, 302)
                 rv = c.get('/en_US/cart')
@@ -326,7 +351,10 @@ class TestCart(BaseTestCase):
                 #: Add a negative quantity and nothing should change
                 rv = c.post(
                     '/en_US/cart/add',
-                    data={'product': self.product2.id, 'quantity': -10}
+                    data={
+                        'product': self.template2.products[0].id,
+                        'quantity': -10
+                    }
                 )
                 self.assertEqual(rv.status_code, 302)
                 rv = c.get('/en_US/cart')
@@ -340,12 +368,12 @@ class TestCart(BaseTestCase):
         with Transaction().start(DB_NAME, USER, CONTEXT):
             self.setup_defaults()
 
-            sale = self.sale_obj.create({
-                'party': self.registered_user_id.party.id,
+            sale, = self.Sale.create([{
+                'party': self.registered_user.party.id,
                 'company': self.company.id,
                 'currency': self.usd.id,
-            })
-            self.assertEqual(sale.party, self.registered_user_id.party)
+            }])
+            self.assertEqual(sale.party, self.registered_user.party)
 
 
 def suite():

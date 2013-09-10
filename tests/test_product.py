@@ -14,9 +14,9 @@ from decimal import Decimal
 from dateutil.relativedelta import relativedelta
 
 import pycountry
-from nereid.testing import NereidTestCase
 import trytond.tests.test_tryton
 from trytond.tests.test_tryton import POOL, USER, DB_NAME, CONTEXT
+from nereid.testing import NereidTestCase
 from trytond.transaction import Transaction
 
 
@@ -32,57 +32,62 @@ class BaseTestCase(NereidTestCase):
         # installed.
         trytond.tests.test_tryton.install_module('company')
 
-        self.currency_obj = POOL.get('currency.currency')
-        self.company_obj = POOL.get('company.company')
+        self.Currency = POOL.get('currency.currency')
+        self.Company = POOL.get('company.company')
+        self.Party = POOL.get('party.party')
 
         with Transaction().start(DB_NAME, USER, CONTEXT) as txn:
-            if not self.company_obj.search([]):
-                self.usd = self.currency_obj.create({
+            if not self.Company.search([]):
+                self.usd, = self.Currency.create([{
                     'name': 'US Dollar',
                     'code': 'USD',
                     'symbol': '$',
-                })
-                self.company = self.company_obj.create({
+                }])
+                self.party, = self.Party.create([{
                     'name': 'Openlabs',
+                }])
+                self.company, = self.Company.create([{
+                    'party': self.party.id,
                     'currency': self.usd
-                })
+                }])
                 txn.cursor.commit()
             else:
-                self.usd, = self.currency_obj.search([])
-                self.company, = self.company_obj.search([])
+                self.usd, = self.Currency.search([])
+                self.company, = self.Company.search([])
 
         # Now install the cart module to be tested
         trytond.tests.test_tryton.install_module('nereid_cart_b2c')
 
-        self.site_obj = POOL.get('nereid.website')
-        self.sale_obj = POOL.get('sale.sale')
-        self.cart_obj = POOL.get('nereid.cart')
-        self.product_obj = POOL.get('product.product')
-        self.url_map_obj = POOL.get('nereid.url_map')
-        self.language_obj = POOL.get('ir.lang')
-        self.nereid_website_obj = POOL.get('nereid.website')
-        self.uom_obj = POOL.get('product.uom')
-        self.country_obj = POOL.get('country.country')
-        self.subdivision_obj = POOL.get('country.subdivision')
-        self.currency_obj = POOL.get('currency.currency')
-        self.nereid_user_obj = POOL.get('nereid.user')
-        self.user_obj = POOL.get('res.user')
-        self.pricelist_obj = POOL.get('product.price_list')
-        self.location_obj = POOL.get('stock.location')
+        self.Sale = POOL.get('sale.sale')
+        self.Cart = POOL.get('nereid.cart')
+        self.Product = POOL.get('product.product')
+        self.ProductTemplate = POOL.get('product.template')
+        self.UrlMap = POOL.get('nereid.url_map')
+        self.Language = POOL.get('ir.lang')
+        self.NereidWebsite = POOL.get('nereid.website')
+        self.Uom = POOL.get('product.uom')
+        self.Country = POOL.get('country.country')
+        self.Subdivision = POOL.get('country.subdivision')
+        self.Currency = POOL.get('currency.currency')
+        self.NereidUser = POOL.get('nereid.user')
+        self.User = POOL.get('res.user')
+        self.PriceList = POOL.get('product.price_list')
+        self.Location = POOL.get('stock.location')
+        self.Party = POOL.get('party.party')
 
         self.templates = {
-            'localhost/home.jinja': ' Home ',
-            'localhost/login.jinja':
+            'home.jinja': ' Home ',
+            'login.jinja':
                 '{{ login_form.errors }} {{get_flashed_messages()}}',
-            'localhost/shopping-cart.jinja':
+            'shopping-cart.jinja':
                 'Cart:{{ cart.id }},{{get_cart_size()|round|int}},'
                 '{{cart.sale.total_amount}}',
-            'localhost/product.jinja':
+            'product.jinja':
                 '{{ product.sale_price(product.id) }}',
-            'localhost/category.jinja': ' ',
+            'category.jinja': ' ',
         }
 
-    def _create_product_category(self, name, **values):
+    def _create_product_category(self, name, vlist):
         """
         Creates a product category
 
@@ -90,77 +95,86 @@ class BaseTestCase(NereidTestCase):
         arguments
 
         :param name: Name of the product category
+        :param vlist: List of dictionaries of values to create
         """
-        category_obj = POOL.get('product.category')
+        Category = POOL.get('product.category')
 
-        values['name'] = name
-        return category_obj.create(values)
+        for values in vlist:
+            values['name'] = name
+        return Category.create(vlist)
 
-    def _create_product(self, name, uom=u'Unit', **values):
+    def _create_product_template(self, name, vlist, uri, uom=u'Unit'):
         """
-        Create a product and return its ID
-
-        Additional arguments may be provided as keyword arguments
+        Create a product template with products and return its ID
 
         :param name: Name of the product
+        :param vlist: List of dictionaries of values to create
+        :param uri: uri of product template
         :param uom: Note it is the name of UOM (not symbol or code)
         """
-        product_obj = POOL.get('product.product')
-        uom_obj = POOL.get('product.uom')
+        ProductTemplate = POOL.get('product.template')
+        Uom = POOL.get('product.uom')
 
-        values['name'] = name
-        values['default_uom'] = uom_obj.search(
-            [('name', '=', uom)], limit=1
-        )[0].id
-
-        return product_obj.create(values)
+        for values in vlist:
+            values['name'] = name
+            values['default_uom'], = Uom.search([('name', '=', uom)], limit=1)
+            values['sale_uom'], = Uom.search([('name', '=', uom)], limit=1)
+            values['products'] = [
+                ('create', [{
+                    'uri': uri,
+                    'displayed_on_eshop': True
+                }])
+            ]
+        return ProductTemplate.create(vlist)
 
     def _create_fiscal_year(self, date=None, company=None):
-        """Creates a fiscal year and requried sequences
         """
-        fiscal_year_obj = POOL.get('account.fiscalyear')
-        sequence_obj = POOL.get('ir.sequence')
-        sequence_strict_obj = POOL.get('ir.sequence.strict')
-        company_obj = POOL.get('company.company')
+        Creates a fiscal year and requried sequences
+        """
+        FiscalYear = POOL.get('account.fiscalyear')
+        Sequence = POOL.get('ir.sequence')
+        SequenceStrict = POOL.get('ir.sequence.strict')
+        Company = POOL.get('company.company')
 
         if date is None:
             date = datetime.date.today()
 
         if company is None:
-            company, = company_obj.search([], limit=1)
+            company, = Company.search([], limit=1)
 
-        invoice_sequence = sequence_strict_obj.create({
+        invoice_sequence, = SequenceStrict.create([{
             'name': '%s' % date.year,
             'code': 'account.invoice',
             'company': company,
-        })
-        fiscal_year = fiscal_year_obj.create({
+        }])
+        fiscal_year, = FiscalYear.create([{
             'name': '%s' % date.year,
             'start_date': date + relativedelta(month=1, day=1),
             'end_date': date + relativedelta(month=12, day=31),
             'company': company,
-            'post_move_sequence': sequence_obj.create({
+            'post_move_sequence': Sequence.create([{
                 'name': '%s' % date.year,
                 'code': 'account.move',
                 'company': company,
-            }),
+            }])[0],
             'out_invoice_sequence': invoice_sequence,
             'in_invoice_sequence': invoice_sequence,
             'out_credit_note_sequence': invoice_sequence,
             'in_credit_note_sequence': invoice_sequence,
-        })
-        fiscal_year_obj.create_period([fiscal_year])
+        }])
+        FiscalYear.create_period([fiscal_year])
         return fiscal_year
 
     def _create_coa_minimal(self, company):
         """Create a minimal chart of accounts
         """
-        account_template_obj = POOL.get('account.account.template')
-        account_obj = POOL.get('account.account')
+        AccountTemplate = POOL.get('account.account.template')
+        Account = POOL.get('account.account')
+
         account_create_chart = POOL.get(
             'account.create_chart', type="wizard")
 
-        account_template, = account_template_obj.search(
+        account_template, = AccountTemplate.search(
             [('parent', '=', None)]
         )
 
@@ -170,11 +184,11 @@ class BaseTestCase(NereidTestCase):
         create_chart.account.company = company
         create_chart.transition_create_account()
 
-        receivable, = account_obj.search([
+        receivable, = Account.search([
             ('kind', '=', 'receivable'),
             ('company', '=', company),
         ])
-        payable, = account_obj.search([
+        payable, = Account.search([
             ('kind', '=', 'payable'),
             ('company', '=', company),
         ])
@@ -189,38 +203,39 @@ class BaseTestCase(NereidTestCase):
         :param kind: receivable/payable/expense/revenue
         :param silent: dont raise error if account is not found
         """
-        account_obj = POOL.get('account.account')
-        company_obj = POOL.get('company.company')
+        Account = POOL.get('account.account')
+        Company = POOL.get('company.company')
 
         if company is None:
-            company, = company_obj.search([], limit=1)
+            company, = Company.search([], limit=1)
 
-        account_ids = account_obj.search([
+        accounts = Account.search([
             ('kind', '=', kind),
             ('company', '=', company)
         ], limit=1)
-        if not account_ids and not silent:
+        if not accounts and not silent:
             raise Exception("Account not found")
-        return account_ids[0] if account_ids else False
+        return accounts[0] if accounts else False
 
     def _create_payment_term(self):
         """Create a simple payment term with all advance
         """
-        payment_term_obj = POOL.get('account.invoice.payment_term')
-        return payment_term_obj.create({
+        PaymentTerm = POOL.get('account.invoice.payment_term')
+
+        return PaymentTerm.create([{
             'name': 'Direct',
-            'lines': [('create', {'type': 'remainder'})]
-        })
+            'lines': [('create', [{'type': 'remainder'}])]
+        }])
 
     def _create_countries(self, count=5):
         """
         Create some sample countries and subdivisions
         """
         for country in list(pycountry.countries)[0:count]:
-            country_id = self.country_obj.create({
+            countries = self.Country.create([{
                 'name': country.name,
                 'code': country.alpha2,
-            })
+            }])
             try:
                 divisions = pycountry.subdivisions.get(
                     country_code=country.alpha2
@@ -229,12 +244,12 @@ class BaseTestCase(NereidTestCase):
                 pass
             else:
                 for subdivision in list(divisions)[0:count]:
-                    self.subdivision_obj.create({
-                        'country': country_id,
+                    self.Subdivision.create([{
+                        'country': countries[0].id,
                         'name': subdivision.name,
                         'code': subdivision.code,
                         'type': subdivision.type.lower(),
-                    })
+                    }])
 
     def _create_pricelists(self):
         """
@@ -243,24 +258,24 @@ class BaseTestCase(NereidTestCase):
         # Setup the pricelists
         self.party_pl_margin = Decimal('1.10')
         self.guest_pl_margin = Decimal('1.20')
-        user_price_list = self.pricelist_obj.create({
+        user_price_list, = self.PriceList.create([{
             'name': 'PL 1',
             'company': self.company.id,
             'lines': [
-                ('create', {
+                ('create', [{
                     'formula': 'unit_price * %s' % self.party_pl_margin
-                })
+                }])
             ],
-        })
-        guest_price_list = self.pricelist_obj.create({
+        }])
+        guest_price_list, = self.PriceList.create([{
             'name': 'PL 2',
             'company': self.company.id,
             'lines': [
-                ('create', {
+                ('create', [{
                     'formula': 'unit_price * %s' % self.guest_pl_margin
-                })
+                }])
             ],
-        })
+        }])
         return guest_price_list.id, user_price_list.id
 
     def setup_defaults(self):
@@ -268,13 +283,13 @@ class BaseTestCase(NereidTestCase):
         Setup the defaults
         """
 
-        self.user_obj.write(
-            [self.user_obj(USER)], {
+        self.User.write(
+            [self.User(USER)], {
                 'main_company': self.company.id,
                 'company': self.company.id,
             }
         )
-        CONTEXT.update(self.user_obj.get_preferences(context_only=True))
+        CONTEXT.update(self.User.get_preferences(context_only=True))
 
         # Create Fiscal Year
         self._create_fiscal_year(company=self.company.id)
@@ -285,48 +300,61 @@ class BaseTestCase(NereidTestCase):
 
         guest_price_list, user_price_list = self._create_pricelists()
 
-        # Create users and assign the pricelists to them
-        guest_user = self.nereid_user_obj.create({
+        party1, = self.Party.create([{
             'name': 'Guest User',
+            'sale_price_list': guest_price_list
+        }])
+
+        party2, = self.Party.create([{
+            'name': 'Registered User',
+            'sale_price_list': user_price_list,
+        }])
+
+        party3, = self.Party.create([{
+            'name': 'Registered User 2',
+        }])
+
+        # Create users and assign the pricelists to them
+        guest_user, = self.NereidUser.create([{
+            'party': party1.id,
             'display_name': 'Guest User',
             'email': 'guest@openlabs.co.in',
             'password': 'password',
             'company': self.company.id,
-            'sale_price_list': guest_price_list,
-        })
-        self.registered_user_id = self.nereid_user_obj.create({
-            'name': 'Registered User',
+        }])
+        self.registered_user, = self.NereidUser.create([{
+            'party': party2.id,
             'display_name': 'Registered User',
             'email': 'email@example.com',
             'password': 'password',
             'company': self.company.id,
-            'sale_price_list': user_price_list,
-        })
-        self.registered_user_id2 = self.nereid_user_obj.create({
-            'name': 'Registered User 2',
+        }])
+        self.registered_user2, = self.NereidUser.create([{
+            'party': party3.id,
             'display_name': 'Registered User 2',
             'email': 'email2@example.com',
             'password': 'password2',
             'company': self.company.id,
-        })
+        }])
 
         self._create_countries()
-        self.available_countries = self.country_obj.search([], limit=5)
+        self.available_countries = self.Country.search([], limit=5)
 
-        category = self._create_product_category(
-            'Category', uri='category'
+        self.category, = self._create_product_category(
+            'Category', [{'uri': 'category'}]
         )
-        warehouse, = self.location_obj.search([
+
+        warehouse, = self.Location.search([
             ('type', '=', 'warehouse')
         ], limit=1)
-        location, = self.location_obj.search([
+        location, = self.Location.search([
             ('type', '=', 'storage')
         ], limit=1)
-        url_map_id, = self.url_map_obj.search([], limit=1)
-        en_us, = self.language_obj.search([('code', '=', 'en_US')])
-        self.nereid_website_obj.create({
+        url_map, = self.UrlMap.search([], limit=1)
+        en_us, = self.Language.search([('code', '=', 'en_US')])
+        self.NereidWebsite.create([{
             'name': 'localhost',
-            'url_map': url_map_id,
+            'url_map': url_map,
             'company': self.company.id,
             'application_user': USER,
             'default_language': en_us,
@@ -334,38 +362,39 @@ class BaseTestCase(NereidTestCase):
             'countries': [('set', self.available_countries)],
             'warehouse': warehouse,
             'stock_location': location,
-            'categories': [('set', [category])],
-            'currencies': [('set', [self.usd])],
-        })
+            'categories': [('set', [self.category.id])],
+            'currencies': [('set', [self.usd.id])],
+        }])
 
-        self.product = self._create_product(
-            'product 1',
-            category=category.id,
-            type='goods',
-            salable=True,
-            list_price=Decimal('10'),
-            cost_price=Decimal('5'),
-            account_expense=self._get_account_by_kind('expense').id,
-            account_revenue=self._get_account_by_kind('revenue').id,
+         # Create product templates with products
+        self.template1, = self._create_product_template(
+            'product-1',
+            [{
+                'category': self.category.id,
+                'type': 'goods',
+                'salable': True,
+                'list_price': Decimal('10'),
+                'cost_price': Decimal('5'),
+                'account_expense': self._get_account_by_kind('expense').id,
+                'account_revenue': self._get_account_by_kind('revenue').id,
+            }],
             uri='product-1',
-            sale_uom=self.uom_obj.search(
-                [('name', '=', 'Unit')], limit=1
-            )[0].id,
         )
-        self.product2 = self._create_product(
-            'product 2',
-            category=category.id,
-            type='goods',
-            salable=True,
-            list_price=Decimal('15'),
-            cost_price=Decimal('5'),
-            account_expense=self._get_account_by_kind('expense').id,
-            account_revenue=self._get_account_by_kind('revenue').id,
+        self.template2, = self._create_product_template(
+            'product-2',
+            [{
+                'category': self.category.id,
+                'type': 'goods',
+                'salable': True,
+                'list_price': Decimal('15'),
+                'cost_price': Decimal('5'),
+                'account_expense': self._get_account_by_kind('expense').id,
+                'account_revenue': self._get_account_by_kind('revenue').id,
+            }],
             uri='product-2',
-            sale_uom=self.uom_obj.search(
-                [('name', '=', 'Unit')], limit=1
-            )[0].id,
         )
+        self.product1 = self.template1.products[0]
+        self.product2 = self.template2.products[0]
 
     def get_template_source(self, name):
         """
@@ -463,9 +492,9 @@ class TestProduct(BaseTestCase):
         """
         Test the availability returned for the products
         """
-        stock_move_obj = POOL.get('stock.move')
-        website_obj = POOL.get('nereid.website')
-        location_obj = POOL.get('stock.location')
+        StockMove = POOL.get('stock.move')
+        Website = POOL.get('nereid.website')
+        Location = POOL.get('stock.location')
 
         with Transaction().start(DB_NAME, USER, CONTEXT):
             self.setup_defaults()
@@ -477,37 +506,45 @@ class TestProduct(BaseTestCase):
                 self.assertEqual(availability['quantity'], 0.00)
                 self.assertEqual(availability['forecast_quantity'], 0.00)
 
-            website, = website_obj.search([])
-            supplier_id, = location_obj.search([('code', '=', 'SUP')])
-            stock_move_obj.create({
-                'product': self.product.id,
-                'uom': self.product.sale_uom.id,
+            website, = Website.search([])
+            supplier, = Location.search([('code', '=', 'SUP')])
+            stock1, = StockMove.create([{
+                'product': self.product1.id,
+                'uom': self.template1.sale_uom.id,
                 'quantity': 10,
-                'from_location': supplier_id,
+                'from_location': supplier,
                 'to_location': website.stock_location.id,
                 'company': website.company.id,
                 'unit_price': Decimal('1'),
                 'currency': website.currencies[0].id,
-                'state': 'done'
-            })
-            stock_move_obj.create({
-                'product': self.product.id,
-                'uom': self.product.sale_uom.id,
+                'planned_date': datetime.date.today(),
+                'state': 'draft',
+            }])
+            stock2, = StockMove.create([{
+                'product': self.product1.id,
+                'uom': self.template1.sale_uom.id,
                 'quantity': 10,
-                'from_location': supplier_id,
+                'from_location': supplier,
                 'to_location': website.stock_location.id,
                 'company': website.company.id,
                 'unit_price': Decimal('1'),
                 'currency': website.currencies[0].id,
                 'planned_date': datetime.date.today() + relativedelta(days=1),
                 'state': 'draft'
+            }])
+            StockMove.write([stock1], {
+                'state': 'done'
             })
 
+            locations = Location.search([('type', '=', 'storage')])
+
             with app.test_client() as c:
-                rv = c.get('/en_US/product-availability/product-1')
-                availability = json.loads(rv.data)
-                self.assertEqual(availability['forecast_quantity'], 20.00)
-                self.assertEqual(availability['quantity'], 10.00)
+                with Transaction().set_context(
+                        {'locations': map(int, locations)}):
+                    rv = c.get('/en_US/product-availability/product-1')
+                    availability = json.loads(rv.data)
+                    self.assertEqual(availability['forecast_quantity'], 20.00)
+                    self.assertEqual(availability['quantity'], 10.00)
 
 
 def suite():

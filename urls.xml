@@ -27,7 +27,7 @@
             <field name="rule">/&lt;language&gt;/cart/add</field>
             <field name="endpoint">nereid.cart.add_to_cart</field>
             <field name="sequence" eval="140" />
-            <field name="methods">("POST",)</field>
+            <field name="http_method_post" eval="True" />
             <field name="url_map" ref="nereid.default_url_map" />
         </record>          
 
