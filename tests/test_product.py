@@ -74,6 +74,7 @@ class BaseTestCase(NereidTestCase):
         self.PriceList = POOL.get('product.price_list')
         self.Location = POOL.get('stock.location')
         self.Party = POOL.get('party.party')
+        self.Locale = POOL.get('nereid.website.locale')
 
         self.templates = {
             'home.jinja': ' Home ',
@@ -352,12 +353,18 @@ class BaseTestCase(NereidTestCase):
         ], limit=1)
         url_map, = self.UrlMap.search([], limit=1)
         en_us, = self.Language.search([('code', '=', 'en_US')])
+
+        self.locale_en_us, = self.Locale.create([{
+            'code': 'en_US',
+            'language': en_us.id,
+            'currency': self.usd.id,
+        }])
         self.NereidWebsite.create([{
             'name': 'localhost',
             'url_map': url_map,
             'company': self.company.id,
             'application_user': USER,
-            'default_language': en_us,
+            'default_locale': self.locale_en_us.id,
             'guest_user': guest_user,
             'countries': [('set', self.available_countries)],
             'warehouse': warehouse,
@@ -417,7 +424,7 @@ class BaseTestCase(NereidTestCase):
                         be raised
         """
         rv = client.post(
-            '/en_US/login', data={
+            '/login', data={
                 'email': username,
                 'password': password,
             }
@@ -439,11 +446,11 @@ class TestProduct(BaseTestCase):
             app = self.get_app()
 
             with app.test_client() as c:
-                rv = c.get('/en_US/product/product-1')
+                rv = c.get('/product/product-1')
                 self.assertEqual(
                     Decimal(rv.data), Decimal('10') * self.guest_pl_margin
                 )
-                rv = c.get('/en_US/product/product-2')
+                rv = c.get('/product/product-2')
                 self.assertEqual(
                     Decimal(rv.data), Decimal('15') * self.guest_pl_margin
                 )
@@ -459,11 +466,11 @@ class TestProduct(BaseTestCase):
             with app.test_client() as c:
                 # Use the partner
                 self.login(c, 'email@example.com', 'password')
-                rv = c.get('/en_US/product/product-1')
+                rv = c.get('/product/product-1')
                 self.assertEqual(
                     Decimal(rv.data), Decimal('10') * self.party_pl_margin
                 )
-                rv = c.get('/en_US/product/product-2')
+                rv = c.get('/product/product-2')
                 self.assertEqual(
                     Decimal(rv.data), Decimal('15') * self.party_pl_margin
                 )
@@ -479,11 +486,11 @@ class TestProduct(BaseTestCase):
 
             with app.test_client() as c:
                 self.login(c, 'email2@example.com', 'password2')
-                rv = c.get('/en_US/product/product-1')
+                rv = c.get('/product/product-1')
                 self.assertEqual(
                     Decimal(rv.data), Decimal('10') * self.guest_pl_margin
                 )
-                rv = c.get('/en_US/product/product-2')
+                rv = c.get('/product/product-2')
                 self.assertEqual(
                     Decimal(rv.data), Decimal('15') * self.guest_pl_margin
                 )
@@ -501,7 +508,7 @@ class TestProduct(BaseTestCase):
             app = self.get_app()
 
             with app.test_client() as c:
-                rv = c.get('/en_US/product-availability/product-1')
+                rv = c.get('/product-availability/product-1')
                 availability = json.loads(rv.data)
                 self.assertEqual(availability['quantity'], 0.00)
                 self.assertEqual(availability['forecast_quantity'], 0.00)
@@ -541,7 +548,7 @@ class TestProduct(BaseTestCase):
             with app.test_client() as c:
                 with Transaction().set_context(
                         {'locations': map(int, locations)}):
-                    rv = c.get('/en_US/product-availability/product-1')
+                    rv = c.get('/product-availability/product-1')
                     availability = json.loads(rv.data)
                     self.assertEqual(availability['forecast_quantity'], 20.00)
                     self.assertEqual(availability['quantity'], 10.00)
