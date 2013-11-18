@@ -11,9 +11,9 @@ from decimal import Decimal
 from functools import partial
 import warnings
 
-from nereid import jsonify, render_template, flash
-from nereid.helpers import login_required, url_for
-from nereid.globals import session, request, current_app
+from nereid import jsonify, render_template, flash, request, login_required, \
+    url_for
+from nereid.globals import session, current_app
 from nereid.signals import login
 from werkzeug import redirect
 from babel import numbers
@@ -171,7 +171,7 @@ class Cart(ModelSQL):
         # for a registered user there is only one cart, session is immaterial
         if 'user' in session:
             carts = cls.search([
-                ('sessionid', '=', False),
+                ('sessionid', '=', None),
                 ('user', '=', user.id),
                 ('website', '=', request.nereid_website.id)
             ])
