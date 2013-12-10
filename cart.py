@@ -104,7 +104,7 @@ class Cart(ModelSQL):
             })
 
         return current_app.response_class(
-            render_template('shopping-cart.jinja', cart=cart),
+            unicode(render_template('shopping-cart.jinja', cart=cart)),
             headers=[('Cache-Control', 'max-age=0')]
         )
 
@@ -116,7 +116,7 @@ class Cart(ModelSQL):
         """
         cart = cls.open_cart()
         return current_app.response_class(
-            render_template('shopping-cart-esi.jinja', cart=cart),
+            unicode(render_template('shopping-cart-esi.jinja', cart=cart)),
             headers=[('Cache-Control', 'max-age=0')]
         )
 
