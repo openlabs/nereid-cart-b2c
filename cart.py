@@ -249,20 +249,10 @@ class Cart(ModelSQL):
         Sale = Pool().get('sale.sale')
 
         site = request.nereid_website
-        guest_user = request.nereid_website.guest_user
-
-        # Get the pricelist of active user, may be regd or guest
-        price_list = user.party.sale_price_list.id \
-            if user.party.sale_price_list else None
-
-        # If the regsitered user does not have a pricelist try for
-        # the pricelist of guest user
-        if (guest_user != user) and price_list is None:
-            price_list = guest_user.party.sale_price_list.id \
-                if guest_user.party.sale_price_list else None
 
         # TODO: Evaluate if an error needs to be raised if the pricelist
         # is still not there.
+        price_list = Sale.default_price_list(user)
         if not price_list:
             raise Exception("There is no pricelist")
 

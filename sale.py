@@ -9,6 +9,8 @@
 '''
 from trytond.pool import PoolMeta
 from trytond.model import fields
+from nereid import request
+from nereid.ctx import has_request_context
 
 __all__ = ['Sale']
 __metaclass__ = PoolMeta
@@ -35,3 +37,23 @@ class Sale:
         from backend to be placed under default.
         """
         return False
+
+    @staticmethod
+    def default_price_list(user=None):
+        """Get the pricelist of active user. In the
+        event that the logged in user does not have a pricelist set against
+        the user, the guest user's pricelist is chosen.
+
+        :param user: active record of the nereid user
+        """
+        if not has_request_context():
+            return None
+        if user is None:
+            user = request.nereid_user
+        if user.party.sale_price_list:
+            return user.party.sale_price_list.id
+
+        guest_user = request.nereid_website.guest_user
+        if not request.is_guest_user and guest_user.party.sale_price_list:
+            return guest_user.party.sale_price_list.id
+        return None
