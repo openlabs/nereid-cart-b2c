@@ -10,7 +10,9 @@
 import unittest
 from decimal import Decimal
 
-from trytond.tests.test_tryton import USER, DB_NAME, CONTEXT
+from nereid import request
+from nereid.globals import session
+from trytond.tests.test_tryton import USER, DB_NAME, CONTEXT, POOL
 from trytond.transaction import Transaction
 
 from test_product import BaseTestCase
@@ -374,6 +376,31 @@ class TestCart(BaseTestCase):
                 'currency': self.usd.id,
             }])
             self.assertEqual(sale.party, self.registered_user.party)
+
+    def test_0100_create_draft_sale(self):
+        """
+        Create draft sale method
+        """
+        with Transaction().start(DB_NAME, USER, CONTEXT):
+            self.setup_defaults()
+            app = self.get_app()
+
+            Cart = POOL.get('nereid.cart')
+
+            with app.test_request_context('/'):
+                # Guest cart
+                cart, = Cart.create([{
+                    'user': None,
+                    'sessionid': session.sid,
+                }])
+                cart.create_draft_sale()
+
+                self.assertEqual(
+                    cart.sale.party, request.nereid_website.guest_user.party
+                )
+                self.assertEqual(
+                    cart.sale.nereid_user, request.nereid_website.guest_user
+                )
 
 
 def suite():
