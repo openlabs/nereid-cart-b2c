@@ -9,7 +9,6 @@
 '''
 from decimal import Decimal
 from functools import partial
-import warnings
 
 from nereid import jsonify, render_template, flash, request, login_required, \
     url_for
@@ -403,7 +402,7 @@ class Cart(ModelSQL):
 
 
 @login.connect
-def login_event_handler(website_obj=None):
+def login_event_handler():
     """This method is triggered when a login event occurs.
 
     When a user logs in, all items in his guest cart should be added to his
@@ -415,13 +414,6 @@ def login_event_handler(website_obj=None):
         object in the class was required to load other objects from the pool.
         Since pool object is a singleton, this object is not required.
     """
-
-    if website_obj is not None:
-        warnings.warn(
-            "login_event_handler will not accept arguments from "
-            "Version 2.5 +", DeprecationWarning, stacklevel=2
-        )
-
     try:
         Cart = Pool().get('nereid.cart')
     except KeyError:
