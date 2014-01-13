@@ -383,13 +383,14 @@ class Cart(ModelSQL):
                 'product': product_id,
                 '_parent_sale.currency': sale.currency.id,
                 '_parent_sale.party': sale.party.id,
-                '_parent_sale.price_list': sale.price_list.id,
                 'sale': sale.id,
                 'type': 'line',
                 'quantity': quantity,
                 'unit': None,
                 'description': None,
             }
+            if sale.price_list:
+                values['_parent_sale.price_list'] = sale.price_list.id
             values.update(SaleLine(**values).on_change_product())
             values.update(SaleLine(**values).on_change_quantity())
             new_values = {}
