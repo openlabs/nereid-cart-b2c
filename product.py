@@ -11,7 +11,7 @@ from datetime import date
 from dateutil.relativedelta import relativedelta
 
 from trytond.transaction import Transaction
-from trytond.pool import PoolMeta
+from trytond.pool import PoolMeta, Pool
 from nereid import request, cache, jsonify, abort
 from nereid.helpers import key_from_list
 
@@ -38,15 +38,9 @@ class Product:
 
         :param quantity: Quantity
         """
-        price_list = request.nereid_user.party.sale_price_list.id if \
-            request.nereid_user.party.sale_price_list else None
+        Sale = Pool().get('sale.sale')
 
-        # If the registered user does not have a pricelist try for
-        # the pricelist of guest user
-        if not request.is_guest_user and price_list is None:
-            guest_user = request.nereid_website.guest_user
-            price_list = guest_user.party.sale_price_list.id if \
-                guest_user.party.sale_price_list else None
+        price_list = Sale.default_price_list()
 
         # Build a Cache key to store in cache
         cache_key = key_from_list([
