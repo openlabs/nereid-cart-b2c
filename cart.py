@@ -4,7 +4,7 @@
 
     Cart
 
-    :copyright: (c) 2010-2013 by Openlabs Technologies & Consulting (P) LTD
+    :copyright: (c) 2010-2014 by Openlabs Technologies & Consulting (P) LTD
     :license: GPLv3, see LICENSE for more details
 '''
 from decimal import Decimal
@@ -12,6 +12,7 @@ from functools import partial
 
 from nereid import jsonify, render_template, flash, request, login_required, \
     url_for
+from nereid.contrib.locale import make_lazy_gettext
 from nereid.globals import session, current_app
 from nereid.signals import login
 from werkzeug import redirect
@@ -22,12 +23,10 @@ from trytond.model import ModelSQL, fields
 from trytond.pool import Pool, PoolMeta
 
 from .forms import AddtoCartForm
-from .i18n import _
+_ = make_lazy_gettext('nereid_cart_b2c')
 
 __all__ = ['Cart']
 __metaclass__ = PoolMeta
-
-# pylint: disable-msg=E1101
 
 
 class Cart(ModelSQL):
