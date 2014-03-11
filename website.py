@@ -8,7 +8,7 @@
 from functools import partial
 
 from babel import numbers
-from nereid import render_template, login_required, request
+from nereid import render_template, login_required, request, current_user
 from nereid.contrib.pagination import Pagination
 from nereid.globals import session
 from trytond.model import fields
@@ -69,17 +69,17 @@ class Website:
         Shipment = Pool().get('stock.shipment.out')
 
         sales = Pagination(Sale, [
-            ('party', '=', request.nereid_user.party.id),
+            ('party', '=', current_user.party.id),
             ('state', '!=', 'draft')
         ], 1, 5)
 
         invoices = Pagination(Invoice, [
-            ('party', '=', request.nereid_user.party.id),
+            ('party', '=', current_user.party.id),
             ('state', '!=', 'draft'),
         ], 1, 5)
 
         shipments = Pagination(Shipment, [
-            ('customer', '=', request.nereid_user.party.id),
+            ('customer', '=', current_user.party.id),
             ('state', '!=', 'draft'),
         ], 1, 5)
 
@@ -102,7 +102,7 @@ class Website:
         return render_template(
             'account.jinja', sales=sales,
             invoices=invoices, shipments=shipments,
-            user=request.nereid_user
+            user=current_user
         )
 
     @classmethod
@@ -111,7 +111,7 @@ class Website:
         'All sales'
         Sale = Pool().get('sale.sale')
         sales = Pagination(Sale, [
-            ('party', '=', request.nereid_user.party.id),
+            ('party', '=', current_user.party.id),
             ('state', '!=', 'draft')
         ], page, cls.per_page)
         return render_template('sales.jinja', sales=sales)
@@ -122,7 +122,7 @@ class Website:
         'List of Invoices'
         Invoice = Pool().get('account.invoice')
         invoices = Pagination(Invoice, [
-            ('party', '=', request.nereid_user.party.id),
+            ('party', '=', current_user.party.id),
             ('state', '!=', 'draft')
         ], page, cls.per_page)
         return render_template('invoices.jinja', invoices=invoices)
@@ -133,7 +133,7 @@ class Website:
         'List of Shipments'
         Shipment = Pool().get('stock.shipment.out')
         shipments = Pagination(Shipment, [
-            ('customer', '=', request.nereid_user.party.id),
+            ('customer', '=', current_user.party.id),
             ('state', '!=', 'draft'),
         ], page, cls.per_page)
         return render_template('shipments.jinja', shipments=shipments)

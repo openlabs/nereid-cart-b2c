@@ -12,7 +12,7 @@ from dateutil.relativedelta import relativedelta
 
 from trytond.transaction import Transaction
 from trytond.pool import PoolMeta, Pool
-from nereid import request, cache, jsonify, abort
+from nereid import request, cache, jsonify, abort, current_user
 from nereid.helpers import key_from_list
 
 __all__ = ['Product']
@@ -42,11 +42,16 @@ class Product:
 
         price_list = Sale.default_price_list()
 
+        if current_user.is_anonymous():
+            customer = request.nereid_website.guest_user.party
+        else:
+            customer = current_user.party
+
         # Build a Cache key to store in cache
         cache_key = key_from_list([
             Transaction().cursor.dbname,
             Transaction().user,
-            request.nereid_user.party.id,
+            customer.id,
             price_list, self.id, quantity,
             request.nereid_currency.id,
             'product.product.sale_price',
@@ -55,7 +60,7 @@ class Product:
         if price is None:
             # There is a valid pricelist, now get the price
             with Transaction().set_context(
-                customer=request.nereid_user.party.id,
+                customer=customer.id,
                 price_list=price_list,
                 currency=request.nereid_currency.id
             ):
