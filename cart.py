@@ -11,10 +11,10 @@ from decimal import Decimal
 from functools import partial
 
 from nereid import jsonify, render_template, flash, request, login_required, \
-    url_for
+    url_for, current_user
 from nereid.contrib.locale import make_lazy_gettext
 from nereid.globals import session, current_app
-from nereid.signals import login
+from flask.ext.login import user_logged_in
 from werkzeug import redirect
 from babel import numbers
 
@@ -48,8 +48,8 @@ class Cart(ModelSQL):
 
     @staticmethod
     def default_user():
-        if not request.is_guest_user:
-            return request.nereid_user.id
+        if not current_user.is_anonymous():
+            return current_user.id
 
     @staticmethod
     def default_session():
@@ -70,9 +70,9 @@ class Cart(ModelSQL):
     @login_required
     def _get_addresses(cls):
         'Returns a list of tuple of addresses'
-        party = request.nereid_user.party
         return [
-            (address.id, address.full_address) for address in party.addresses
+            (address.id, address.full_address)
+            for address in current_user.party.addresses
         ]
 
     @classmethod
@@ -209,7 +209,7 @@ class Cart(ModelSQL):
         # redirected). This causes the cached property of nereid_user to remain
         # in old value through out the request, which will not  have ended when
         # this method is called.
-        user_id = session.get('user')
+        user_id = current_user.id
 
         cart = cls.find_cart(user_id)
 
@@ -436,8 +436,8 @@ class Cart(ModelSQL):
         }
 
     @staticmethod
-    @login.connect
-    def login_event_handler(sender):
+    @user_logged_in.connect
+    def login_event_handler(sender, user):
         '''
         This method itself does not do anything required by the login handler.
         All the hard work is done by the :meth:`_login_event_handler`. This is
@@ -459,10 +459,10 @@ class Cart(ModelSQL):
                 "nereid-cart-b2c module installed but not in database"
             )
         else:
-            Cart._login_event_handler(sender)
+            Cart._login_event_handler(user)
 
     @classmethod
-    def _login_event_handler(cls, sender=None):
+    def _login_event_handler(cls, user=None):
         """This method is triggered when a login event occurs.
 
         When a user logs in, all items in his guest cart should be added to his
