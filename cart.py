@@ -320,8 +320,8 @@ class Cart(ModelSQL):
             'OK' if X-HTTPRequest
             Redirect to shopping cart if normal request
         """
-        form = AddtoCartForm(request.form)
-        if request.method == 'POST' and form.validate():
+        form = AddtoCartForm()
+        if form.validate_on_submit():
             cart = cls.open_cart(create_order=True)
             action = request.values.get('action', 'set')
             if form.quantity.data <= 0:
