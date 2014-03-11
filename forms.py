@@ -6,9 +6,9 @@
 
     :copyright: (c) 2010-2014 by Openlabs Technologies & Consulting (P) LTD
     :license: GPLv3, see LICENSE for more details
-    '''
-from wtforms import Form, validators
-from wtforms import IntegerField, FloatField
+'''
+from flask_wtf import Form
+from wtforms import validators, IntegerField, FloatField
 from nereid.contrib.locale import make_lazy_gettext
 
 _ = make_lazy_gettext('nereid_cart_b2c')
