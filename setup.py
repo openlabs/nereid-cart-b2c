@@ -108,7 +108,7 @@ requires.append(
     )
 )
 # Explicitly add version of nereid which this module depends on
-requires.append('trytond_nereid>=3.0.4.0,<3.1')
+requires.append('trytond_nereid>=3.0.4.2,<3.1')
 
 setup(
     name='trytond_nereid_cart_b2c',

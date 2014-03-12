@@ -114,10 +114,9 @@ class Cart(ModelSQL):
                 'untaxed_amount': currency_format(cart.sale.untaxed_amount),
             })
 
-        return current_app.response_class(
-            unicode(render_template('shopping-cart.jinja', cart=cart)),
-            headers=[('Cache-Control', 'max-age=0')]
-        )
+        response = render_template('shopping-cart.jinja', cart=cart)
+        response.headers['Cache-Control'] = 'max-age=0'
+        return response
 
     @classmethod
     def view_cart_esi(cls):
@@ -126,10 +125,9 @@ class Cart(ModelSQL):
         Similar to :meth:view_cart but for ESI
         """
         cart = cls.open_cart()
-        return current_app.response_class(
-            unicode(render_template('shopping-cart-esi.jinja', cart=cart)),
-            headers=[('Cache-Control', 'max-age=0')]
-        )
+        response = render_template('shopping-cart-esi.jinja', cart=cart)
+        response.headers['Cache-Control'] = 'max-age=0'
+        return response
 
     def _clear_cart(self):
         """
