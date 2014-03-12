@@ -4,12 +4,12 @@
 
     Sales modules changes to fit nereid
 
-    :copyright: (c) 2010-2013 by Openlabs Technologies & Consulting (P) Ltd.
+    :copyright: (c) 2010-2014 by Openlabs Technologies & Consulting (P) Ltd.
     :license: GPLv3, see LICENSE for more details
 '''
 from trytond.pool import PoolMeta
 from trytond.model import fields
-from nereid import request
+from nereid import request, current_user
 from nereid.ctx import has_request_context
 
 __all__ = ['Sale']
@@ -47,13 +47,24 @@ class Sale:
         :param user: active record of the nereid user
         """
         if not has_request_context():
+            # Not a nereid request
             return None
-        if user is None:
-            user = request.nereid_user
-        if user.party.sale_price_list:
+
+        if user is not None and user.party.sale_price_list:
+            # If a user was provided and the user has a pricelist, use
+            # that
             return user.party.sale_price_list.id
 
+        if not current_user.is_anonymous() and \
+                current_user.party.sale_price_list:
+            # If the currently logged in user has a pricelist defined, use
+            # that
+            return current_user.party.sale_price_list.id
+
+        # Since there is no pricelist for the user, use the guest user's
+        # pricelist if one is defined.
         guest_user = request.nereid_website.guest_user
-        if not request.is_guest_user and guest_user.party.sale_price_list:
+        if guest_user.party.sale_price_list:
             return guest_user.party.sale_price_list.id
+
         return None

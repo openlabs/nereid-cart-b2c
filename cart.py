@@ -4,16 +4,17 @@
 
     Cart
 
-    :copyright: (c) 2010-2013 by Openlabs Technologies & Consulting (P) LTD
+    :copyright: (c) 2010-2014 by Openlabs Technologies & Consulting (P) LTD
     :license: GPLv3, see LICENSE for more details
 '''
 from decimal import Decimal
 from functools import partial
 
 from nereid import jsonify, render_template, flash, request, login_required, \
-    url_for
+    url_for, current_user
+from nereid.contrib.locale import make_lazy_gettext
 from nereid.globals import session, current_app
-from nereid.signals import login
+from flask.ext.login import user_logged_in
 from werkzeug import redirect
 from babel import numbers
 
@@ -22,12 +23,10 @@ from trytond.model import ModelSQL, fields
 from trytond.pool import Pool, PoolMeta
 
 from .forms import AddtoCartForm
-from .i18n import _
+_ = make_lazy_gettext('nereid_cart_b2c')
 
 __all__ = ['Cart']
 __metaclass__ = PoolMeta
-
-# pylint: disable-msg=E1101
 
 
 class Cart(ModelSQL):
@@ -49,8 +48,8 @@ class Cart(ModelSQL):
 
     @staticmethod
     def default_user():
-        if not request.is_guest_user:
-            return request.nereid_user.id
+        if not current_user.is_anonymous():
+            return current_user.id
 
     @staticmethod
     def default_session():
@@ -71,9 +70,9 @@ class Cart(ModelSQL):
     @login_required
     def _get_addresses(cls):
         'Returns a list of tuple of addresses'
-        party = request.nereid_user.party
         return [
-            (address.id, address.full_address) for address in party.addresses
+            (address.id, address.full_address)
+            for address in current_user.party.addresses
         ]
 
     @classmethod
@@ -115,10 +114,9 @@ class Cart(ModelSQL):
                 'untaxed_amount': currency_format(cart.sale.untaxed_amount),
             })
 
-        return current_app.response_class(
-            unicode(render_template('shopping-cart.jinja', cart=cart)),
-            headers=[('Cache-Control', 'max-age=0')]
-        )
+        response = render_template('shopping-cart.jinja', cart=cart)
+        response.headers['Cache-Control'] = 'max-age=0'
+        return response
 
     @classmethod
     def view_cart_esi(cls):
@@ -127,10 +125,9 @@ class Cart(ModelSQL):
         Similar to :meth:view_cart but for ESI
         """
         cart = cls.open_cart()
-        return current_app.response_class(
-            unicode(render_template('shopping-cart-esi.jinja', cart=cart)),
-            headers=[('Cache-Control', 'max-age=0')]
-        )
+        response = render_template('shopping-cart-esi.jinja', cart=cart)
+        response.headers['Cache-Control'] = 'max-age=0'
+        return response
 
     def _clear_cart(self):
         """
@@ -210,7 +207,7 @@ class Cart(ModelSQL):
         # redirected). This causes the cached property of nereid_user to remain
         # in old value through out the request, which will not  have ended when
         # this method is called.
-        user_id = session.get('user')
+        user_id = current_user.id
 
         cart = cls.find_cart(user_id)
 
@@ -321,8 +318,8 @@ class Cart(ModelSQL):
             'OK' if X-HTTPRequest
             Redirect to shopping cart if normal request
         """
-        form = AddtoCartForm(request.form)
-        if request.method == 'POST' and form.validate():
+        form = AddtoCartForm()
+        if form.validate_on_submit():
             cart = cls.open_cart(create_order=True)
             action = request.values.get('action', 'set')
             if form.quantity.data <= 0:
@@ -437,8 +434,8 @@ class Cart(ModelSQL):
         }
 
     @staticmethod
-    @login.connect
-    def login_event_handler(sender):
+    @user_logged_in.connect
+    def login_event_handler(sender, user):
         '''
         This method itself does not do anything required by the login handler.
         All the hard work is done by the :meth:`_login_event_handler`. This is
@@ -460,10 +457,10 @@ class Cart(ModelSQL):
                 "nereid-cart-b2c module installed but not in database"
             )
         else:
-            Cart._login_event_handler(sender)
+            Cart._login_event_handler(user)
 
     @classmethod
-    def _login_event_handler(cls, sender=None):
+    def _login_event_handler(cls, user=None):
         """This method is triggered when a login event occurs.
 
         When a user logs in, all items in his guest cart should be added to his

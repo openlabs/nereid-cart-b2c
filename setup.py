@@ -95,7 +95,7 @@ minor_version = int(minor_version)
 
 requires = ['blinker']
 for dep in info.get('depends', []):
-    if not re.match(r'(ir|res|webdav)(\W|$)', dep):
+    if not re.match(r'(ir|res|webdav|nereid)(\W|$)', dep):
         requires.append(
             'trytond_%s >= %s.%s, < %s.%s' % (
                 dep, major_version, minor_version, major_version,
@@ -107,6 +107,8 @@ requires.append(
         major_version, minor_version, major_version, minor_version + 1
     )
 )
+# Explicitly add version of nereid which this module depends on
+requires.append('trytond_nereid>=3.0.4.2,<3.1')
 
 setup(
     name='trytond_nereid_cart_b2c',

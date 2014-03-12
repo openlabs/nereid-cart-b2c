@@ -402,6 +402,19 @@ class TestCart(BaseTestCase):
                     cart.sale.nereid_user, request.nereid_website.guest_user
                 )
 
+    def test_0110_cart_cache_header(self):
+        """
+        Ensure that the cart page has a no cache header
+        """
+        with Transaction().start(DB_NAME, USER, CONTEXT):
+            self.setup_defaults()
+            app = self.get_app()
+
+            with app.test_client() as c:
+                rv = c.get('/cart')
+                self.assertEqual(rv.status_code, 200)
+                self.assertEqual(rv.headers['Cache-Control'], 'max-age=0')
+
 
 def suite():
     "Cart test suite"
