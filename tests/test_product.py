@@ -373,7 +373,7 @@ class BaseTestCase(NereidTestCase):
             'currencies': [('set', [self.usd.id])],
         }])
 
-         # Create product templates with products
+        # Create product templates with products
         self.template1, = self._create_product_template(
             'product-1',
             [{
