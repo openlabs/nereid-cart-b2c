@@ -359,7 +359,9 @@ class Cart(ModelSQL):
                 'product': product_id,
                 '_parent_sale.currency': sale.currency.id,
                 '_parent_sale.party': sale.party.id,
-                '_parent_sale.price_list': sale.price_list.id,
+                '_parent_sale.price_list': (
+                    sale.price_list.id if sale.price_list else None
+                ),
                 'unit': order_line.unit.id,
                 'quantity': quantity if action == 'set'
                     else quantity + order_line.quantity,
