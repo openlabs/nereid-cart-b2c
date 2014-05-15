@@ -7,6 +7,7 @@
     :copyright: (c) 2010-2014 by Openlabs Technologies & Consulting (P) LTD
     :license: GPLv3, see LICENSE for more details
 '''
+import warnings
 from decimal import Decimal
 from functools import partial
 
@@ -327,7 +328,7 @@ class Cart(ModelSQL):
                     _('Be sensible! You can only add real quantities to cart')
                 )
                 return redirect(url_for('nereid.cart.view_cart'))
-            cart._add_or_update(
+            cart.sale._add_or_update(
                 form.product.data, form.quantity.data, action
             )
             if action == 'add':
@@ -348,57 +349,12 @@ class Cart(ModelSQL):
         :param action: set - set the quantity to the given quantity
                        add - add quantity to existing quantity
         '''
-        SaleLine = Pool().get('sale.line')
-
-        sale = self.sale
-        lines = SaleLine.search([
-            ('sale', '=', sale.id), ('product', '=', product_id)])
-        if lines:
-            order_line = lines[0]
-            values = {
-                'product': product_id,
-                '_parent_sale.currency': sale.currency.id,
-                '_parent_sale.party': sale.party.id,
-                '_parent_sale.price_list': (
-                    sale.price_list.id if sale.price_list else None
-                ),
-                'unit': order_line.unit.id,
-                'quantity': quantity if action == 'set'
-                    else quantity + order_line.quantity,
-                'type': 'line',
-            }
-            values.update(SaleLine(**values).on_change_quantity())
-
-            new_values = {}
-            for key, value in values.iteritems():
-                if '.' not in key:
-                    new_values[key] = value
-                if key == 'taxes' and value:
-                    new_values[key] = [('set', value)]
-            SaleLine.write([order_line], new_values)
-            return order_line
-        else:
-            values = {
-                'product': product_id,
-                '_parent_sale.currency': sale.currency.id,
-                '_parent_sale.party': sale.party.id,
-                'sale': sale.id,
-                'type': 'line',
-                'quantity': quantity,
-                'unit': None,
-                'description': None,
-            }
-            if sale.price_list:
-                values['_parent_sale.price_list'] = sale.price_list.id
-            values.update(SaleLine(**values).on_change_product())
-            values.update(SaleLine(**values).on_change_quantity())
-            new_values = {}
-            for key, value in values.iteritems():
-                if '.' not in key:
-                    new_values[key] = value
-                if key == 'taxes' and value:
-                    new_values[key] = [('set', value)]
-            return SaleLine.create([new_values])[0]
+        warnings.warn(
+            "cart._add_or_update will be deprecated. "
+            "Use cart.sale._add_or_update instead",
+            DeprecationWarning, stacklevel=2
+        )
+        return self.sale._add_or_update(product_id, quantity, action)
 
     @classmethod
     def delete_from_cart(cls, line):
