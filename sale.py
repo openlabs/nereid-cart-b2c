@@ -69,6 +69,19 @@ class Sale:
 
         return None
 
+    def refresh_taxes(self):
+        '''
+        Reload all the taxes
+        '''
+        SaleLine = Pool().get('sale.line')
+
+        for line in self.lines:
+            values = line.on_change_product()
+            if 'taxes' in values:
+                SaleLine.write([line], {
+                    'taxes': [('set', values['taxes'])]
+                })
+
     def _add_or_update(self, product_id, quantity, action='set'):
         '''Add item as a line or if a line with item exists
         update it for the quantity
