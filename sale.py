@@ -12,7 +12,7 @@ from trytond.model import fields
 from nereid import request, current_user
 from nereid.ctx import has_request_context
 
-__all__ = ['Sale']
+__all__ = ['Sale', 'SaleLine']
 __metaclass__ = PoolMeta
 
 
@@ -71,16 +71,10 @@ class Sale:
 
     def refresh_taxes(self):
         '''
-        Reload all the taxes
+        Reload taxes of all sale lines
         '''
-        SaleLine = Pool().get('sale.line')
-
         for line in self.lines:
-            values = line.on_change_product()
-            if 'taxes' in values:
-                SaleLine.write([line], {
-                    'taxes': [('set', values['taxes'])]
-                })
+            line.refresh_taxes()
 
     def _add_or_update(self, product_id, quantity, action='set'):
         '''Add item as a line or if a line with item exists
@@ -141,3 +135,17 @@ class Sale:
                 if key == 'taxes' and value:
                     new_values[key] = [('set', value)]
             return SaleLine.create([new_values])[0]
+
+
+class SaleLine:
+    __name__ = 'sale.line'
+
+    def refresh_taxes(self):
+        "Refresh taxes of sale line"
+        SaleLine = Pool().get('sale.line')
+
+        values = self.on_change_product()
+        if 'taxes' in values:
+            SaleLine.write([self], {
+                'taxes': [('set', values['taxes'])]
+            })
