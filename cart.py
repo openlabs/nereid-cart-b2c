@@ -323,6 +323,8 @@ class Cart(ModelSQL):
             'OK' if X-HTTPRequest
             Redirect to shopping cart if normal request
         """
+        Product = Pool().get('product.product')
+
         form = AddtoCartForm()
         if form.validate_on_submit():
             cart = cls.open_cart(create_order=True)
@@ -332,6 +334,13 @@ class Cart(ModelSQL):
                     _('Be sensible! You can only add real quantities to cart')
                 )
                 return redirect(url_for('nereid.cart.view_cart'))
+
+            if not Product(form.product.data).template.salable:
+                if request.is_xhr:
+                    return jsonify(message="This product is not for sale"), 400
+                flash(_("This product is not for sale"))
+                return redirect(request.referrer)
+
             cart.sale._add_or_update(
                 form.product.data, form.quantity.data, action
             )
