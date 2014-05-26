@@ -12,7 +12,7 @@ from decimal import Decimal
 from functools import partial
 
 from nereid import jsonify, render_template, flash, request, login_required, \
-    url_for, current_user
+    url_for, current_user, route
 from nereid.contrib.locale import make_lazy_gettext
 from nereid.globals import session, current_app
 from flask.ext.login import user_logged_in
@@ -77,6 +77,7 @@ class Cart(ModelSQL):
         ]
 
     @classmethod
+    @route('/cart')
     def view_cart(cls):
         """Returns a view of the shopping cart
 
@@ -120,6 +121,7 @@ class Cart(ModelSQL):
         return response
 
     @classmethod
+    @route('/esi/cart')
     def view_cart_esi(cls):
         """Returns a view of the shopping cart
 
@@ -143,6 +145,7 @@ class Cart(ModelSQL):
         self.__class__.delete([self])
 
     @classmethod
+    @route('/cart/clear')
     def clear_cart(cls):
         """
         Clears the current cart and redirects to shopping cart page
@@ -305,6 +308,7 @@ class Cart(ModelSQL):
         self.save()
 
     @classmethod
+    @route('/cart/add', methods=['POST'])
     def add_to_cart(cls):
         """
         Adds the given item to the cart if it exists or to a new cart
@@ -357,6 +361,7 @@ class Cart(ModelSQL):
         return self.sale._add_or_update(product_id, quantity, action)
 
     @classmethod
+    @route('/cart/delete/<int:line>')
     def delete_from_cart(cls, line):
         """
         Delete a line from the cart. The required argument in POST is:

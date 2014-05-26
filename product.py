@@ -12,7 +12,7 @@ from dateutil.relativedelta import relativedelta
 
 from trytond.transaction import Transaction
 from trytond.pool import PoolMeta, Pool
-from nereid import request, cache, jsonify, abort, current_user
+from nereid import request, cache, jsonify, abort, current_user, route
 from nereid.helpers import key_from_list
 
 __all__ = ['Product']
@@ -98,6 +98,7 @@ class Product:
             }
 
     @classmethod
+    @route('/product-availability/<uri>')
     def availability(cls, uri):
         """
         Returns the following information for a product:
