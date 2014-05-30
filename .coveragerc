@@ -1,0 +1,5 @@
+[run]
+source = trytond.modules.nereid_cart_b2c
+
+[report]
+omit = */tests/*, */fabfile.py
