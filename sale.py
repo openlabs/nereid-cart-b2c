@@ -76,6 +76,16 @@ class Sale:
         for line in self.lines:
             line.refresh_taxes()
 
+    def find_existing_line(self, product_id):
+        """Return existing sale line for given product"""
+        SaleLine = Pool().get('sale.line')
+
+        lines = SaleLine.search([
+            ('sale', '=', self.id),
+            ('product', '=', product_id),
+        ])
+        return lines[0] if lines else None
+
     def _add_or_update(self, product_id, quantity, action='set'):
         '''Add item as a line or if a line with item exists
         update it for the quantity
@@ -87,10 +97,8 @@ class Sale:
         '''
         SaleLine = Pool().get('sale.line')
 
-        lines = SaleLine.search([
-            ('sale', '=', self.id), ('product', '=', product_id)])
-        if lines:
-            order_line = lines[0]
+        order_line = self.find_existing_line(product_id)
+        if order_line:
             values = {
                 'product': product_id,
                 '_parent_sale.currency': self.currency.id,
