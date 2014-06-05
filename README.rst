@@ -2,7 +2,7 @@
 .. image:: https://travis-ci.org/openlabs/nereid-cart-b2c.png?branch=develop
   :target: https://travis-ci.org/openlabs/nereid-cart-b2c
 
-.. image:: https://coveralls.io/repos/openlabs/nereid-cart-b2c/badge.png
+.. image:: https://coveralls.io/repos/openlabs/nereid-cart-b2c/badge.png?branch=develop
   :target: https://coveralls.io/r/openlabs/nereid-cart-b2c
 
 Using Babel to translate nereid
