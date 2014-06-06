@@ -188,6 +188,7 @@ class Website:
                     'unit': line.unit.symbol,
                     'unit_price': currency_format(line.unit_price),
                     'amount': currency_format(line.amount),
+                    'image': line.product.default_image.url,
                 } for line in cart.sale.lines],
                 'empty': len(cart.sale.lines) > 0,
                 'total_amount': currency_format(cart.sale.total_amount),
