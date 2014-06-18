@@ -137,7 +137,7 @@ class TestCart(BaseTestCase):
                 self.assertEqual(rv.status_code, 200)
                 cart_data1 = rv.data[6:]
 
-                #Login now and access cart
+                # Login now and access cart
                 self.login(c, 'email@example.com', 'password')
                 rv = c.get('/cart')
                 self.assertEqual(rv.status_code, 200)
@@ -414,6 +414,36 @@ class TestCart(BaseTestCase):
                 rv = c.get('/cart')
                 self.assertEqual(rv.status_code, 200)
                 self.assertEqual(rv.headers['Cache-Control'], 'max-age=0')
+
+    def test_0120_add_non_salable_product_to_cart(self):
+        """
+        Try to add a non-salable product to cart.
+        """
+        with Transaction().start(DB_NAME, USER, CONTEXT):
+            self.setup_defaults()
+            app = self.get_app()
+
+            # Make product1 non-salable
+            self.assertTrue(self.product1.template.salable)
+            self.template1.salable = False
+            self.template1.save()
+
+            with app.test_client() as c:
+                self.login(c, 'email@example.com', 'password')
+
+                # You are adding a non salable product to cart
+                rv = c.post(
+                    '/cart/add',
+                    data={
+                        'product': self.product1.id, 'quantity': 7
+                    }
+                )
+                rv = c.get('/cart')
+                self.assertEqual(rv.status_code, 200)
+                self.assertEqual(rv.data, 'Cart:1,0,0')
+
+                rv = c.get('/')
+                self.assert_('This product is not for sale' in rv.data)
 
 
 def suite():

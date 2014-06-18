@@ -7,12 +7,12 @@
     :copyright: (c) 2010-2014 by Openlabs Technologies & Consulting (P) Ltd.
     :license: GPLv3, see LICENSE for more details
 '''
-from trytond.pool import PoolMeta
+from trytond.pool import Pool, PoolMeta
 from trytond.model import fields
 from nereid import request, current_user
 from nereid.ctx import has_request_context
 
-__all__ = ['Sale']
+__all__ = ['Sale', 'SaleLine']
 __metaclass__ = PoolMeta
 
 
@@ -68,3 +68,92 @@ class Sale:
             return guest_user.party.sale_price_list.id
 
         return None
+
+    def refresh_taxes(self):
+        '''
+        Reload taxes of all sale lines
+        '''
+        for line in self.lines:
+            line.refresh_taxes()
+
+    def find_existing_line(self, product_id):
+        """Return existing sale line for given product"""
+        SaleLine = Pool().get('sale.line')
+
+        lines = SaleLine.search([
+            ('sale', '=', self.id),
+            ('product', '=', product_id),
+        ])
+        return lines[0] if lines else None
+
+    def _add_or_update(self, product_id, quantity, action='set'):
+        '''Add item as a line or if a line with item exists
+        update it for the quantity
+
+        :param product: ID of the product
+        :param quantity: Quantity
+        :param action: set - set the quantity to the given quantity
+                       add - add quantity to existing quantity
+        '''
+        SaleLine = Pool().get('sale.line')
+
+        order_line = self.find_existing_line(product_id)
+        if order_line:
+            values = {
+                'product': product_id,
+                '_parent_sale.currency': self.currency.id,
+                '_parent_sale.party': self.party.id,
+                '_parent_sale.price_list': (
+                    self.price_list.id if self.price_list else None
+                ),
+                'unit': order_line.unit.id,
+                'quantity': quantity if action == 'set'
+                    else quantity + order_line.quantity,
+                'type': 'line',
+            }
+            values.update(SaleLine(**values).on_change_quantity())
+
+            new_values = {}
+            for key, value in values.iteritems():
+                if '.' not in key:
+                    new_values[key] = value
+                if key == 'taxes' and value:
+                    new_values[key] = [('set', value)]
+            SaleLine.write([order_line], new_values)
+            return order_line
+        else:
+            values = {
+                'product': product_id,
+                '_parent_sale.currency': self.currency.id,
+                '_parent_sale.party': self.party.id,
+                'sale': self.id,
+                'type': 'line',
+                'quantity': quantity,
+                'unit': None,
+                'description': None,
+            }
+            if self.price_list:
+                values['_parent_sale.price_list'] = self.price_list.id
+            values.update(SaleLine(**values).on_change_product())
+            values.update(SaleLine(**values).on_change_quantity())
+            new_values = {}
+            for key, value in values.iteritems():
+                if '.' not in key:
+                    new_values[key] = value
+                if key == 'taxes' and value:
+                    new_values[key] = [('set', value)]
+            return SaleLine.create([new_values])[0]
+
+
+class SaleLine:
+    __name__ = 'sale.line'
+
+    def refresh_taxes(self):
+        "Refresh taxes of sale line"
+        SaleLine = Pool().get('sale.line')
+
+        values = self.on_change_product()
+        if 'taxes' in values:
+            SaleLine.write([self], {
+                'taxes': [('set', values['taxes'])]
+            })

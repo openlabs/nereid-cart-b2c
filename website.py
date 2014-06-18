@@ -8,7 +8,8 @@
 from functools import partial
 
 from babel import numbers
-from nereid import render_template, login_required, request, current_user
+from nereid import render_template, login_required, request, current_user, \
+    route
 from nereid.contrib.pagination import Pagination
 from nereid.globals import session
 from trytond.model import fields
@@ -93,6 +94,7 @@ class Website:
 
     @classmethod
     @login_required
+    @route('/account')
     def account(cls):
         'Account Details'
         account_context = cls.account_context()
@@ -107,6 +109,7 @@ class Website:
 
     @classmethod
     @login_required
+    @route('/sales')
     def sales(cls, page=1):
         'All sales'
         Sale = Pool().get('sale.sale')
@@ -118,6 +121,7 @@ class Website:
 
     @classmethod
     @login_required
+    @route('/invoices')
     def invoices(cls, page=1):
         'List of Invoices'
         Invoice = Pool().get('account.invoice')
@@ -129,6 +133,7 @@ class Website:
 
     @classmethod
     @login_required
+    @route('/shipments')
     def shipments(cls, page=1):
         'List of Shipments'
         Shipment = Pool().get('stock.shipment.out')
@@ -183,6 +188,8 @@ class Website:
                     'unit': line.unit.symbol,
                     'unit_price': currency_format(line.unit_price),
                     'amount': currency_format(line.amount),
+                    'image': line.product.image_sets[0].thumbnail.url()
+                        if line.product.image_sets else None,
                 } for line in cart.sale.lines],
                 'empty': len(cart.sale.lines) > 0,
                 'total_amount': currency_format(cart.sale.total_amount),

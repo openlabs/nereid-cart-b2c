@@ -77,7 +77,7 @@ class BaseTestCase(NereidTestCase):
         self.Locale = POOL.get('nereid.website.locale')
 
         self.templates = {
-            'home.jinja': ' Home ',
+            'home.jinja': '{{get_flashed_messages()}}',
             'login.jinja':
                 '{{ login_form.errors }} {{get_flashed_messages()}}',
             'shopping-cart.jinja':
@@ -373,7 +373,7 @@ class BaseTestCase(NereidTestCase):
             'currencies': [('set', [self.usd.id])],
         }])
 
-         # Create product templates with products
+        # Create product templates with products
         self.template1, = self._create_product_template(
             'product-1',
             [{

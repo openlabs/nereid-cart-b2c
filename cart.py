@@ -7,11 +7,12 @@
     :copyright: (c) 2010-2014 by Openlabs Technologies & Consulting (P) LTD
     :license: GPLv3, see LICENSE for more details
 '''
+import warnings
 from decimal import Decimal
 from functools import partial
 
 from nereid import jsonify, render_template, flash, request, login_required, \
-    url_for, current_user
+    url_for, current_user, route
 from nereid.contrib.locale import make_lazy_gettext
 from nereid.globals import session, current_app
 from flask.ext.login import user_logged_in
@@ -76,6 +77,7 @@ class Cart(ModelSQL):
         ]
 
     @classmethod
+    @route('/cart')
     def view_cart(cls):
         """Returns a view of the shopping cart
 
@@ -119,6 +121,7 @@ class Cart(ModelSQL):
         return response
 
     @classmethod
+    @route('/esi/cart')
     def view_cart_esi(cls):
         """Returns a view of the shopping cart
 
@@ -142,6 +145,7 @@ class Cart(ModelSQL):
         self.__class__.delete([self])
 
     @classmethod
+    @route('/cart/clear')
     def clear_cart(cls):
         """
         Clears the current cart and redirects to shopping cart page
@@ -304,6 +308,7 @@ class Cart(ModelSQL):
         self.save()
 
     @classmethod
+    @route('/cart/add', methods=['POST'])
     def add_to_cart(cls):
         """
         Adds the given item to the cart if it exists or to a new cart
@@ -318,6 +323,8 @@ class Cart(ModelSQL):
             'OK' if X-HTTPRequest
             Redirect to shopping cart if normal request
         """
+        Product = Pool().get('product.product')
+
         form = AddtoCartForm()
         if form.validate_on_submit():
             cart = cls.open_cart(create_order=True)
@@ -327,7 +334,14 @@ class Cart(ModelSQL):
                     _('Be sensible! You can only add real quantities to cart')
                 )
                 return redirect(url_for('nereid.cart.view_cart'))
-            cart._add_or_update(
+
+            if not Product(form.product.data).template.salable:
+                if request.is_xhr:
+                    return jsonify(message="This product is not for sale"), 400
+                flash(_("This product is not for sale"))
+                return redirect(request.referrer)
+
+            cart.sale._add_or_update(
                 form.product.data, form.quantity.data, action
             )
             if action == 'add':
@@ -348,57 +362,15 @@ class Cart(ModelSQL):
         :param action: set - set the quantity to the given quantity
                        add - add quantity to existing quantity
         '''
-        SaleLine = Pool().get('sale.line')
-
-        sale = self.sale
-        lines = SaleLine.search([
-            ('sale', '=', sale.id), ('product', '=', product_id)])
-        if lines:
-            order_line = lines[0]
-            values = {
-                'product': product_id,
-                '_parent_sale.currency': sale.currency.id,
-                '_parent_sale.party': sale.party.id,
-                '_parent_sale.price_list': sale.price_list.id,
-                'unit': order_line.unit.id,
-                'quantity': quantity if action == 'set'
-                    else quantity + order_line.quantity,
-                'type': 'line',
-            }
-            values.update(SaleLine(**values).on_change_quantity())
-
-            new_values = {}
-            for key, value in values.iteritems():
-                if '.' not in key:
-                    new_values[key] = value
-                if key == 'taxes' and value:
-                    new_values[key] = [('set', value)]
-            SaleLine.write([order_line], new_values)
-            return order_line
-        else:
-            values = {
-                'product': product_id,
-                '_parent_sale.currency': sale.currency.id,
-                '_parent_sale.party': sale.party.id,
-                'sale': sale.id,
-                'type': 'line',
-                'quantity': quantity,
-                'unit': None,
-                'description': None,
-            }
-            if sale.price_list:
-                values['_parent_sale.price_list'] = sale.price_list.id
-            values.update(SaleLine(**values).on_change_product())
-            values.update(SaleLine(**values).on_change_quantity())
-            new_values = {}
-            for key, value in values.iteritems():
-                if '.' not in key:
-                    new_values[key] = value
-                if key == 'taxes' and value:
-                    new_values[key] = [('set', value)]
-            return SaleLine.create([new_values])[0]
+        warnings.warn(
+            "cart._add_or_update will be deprecated. "
+            "Use cart.sale._add_or_update instead",
+            DeprecationWarning, stacklevel=2
+        )
+        return self.sale._add_or_update(product_id, quantity, action)
 
     @classmethod
+    @route('/cart/delete/<int:line>')
     def delete_from_cart(cls, line):
         """
         Delete a line from the cart. The required argument in POST is:
