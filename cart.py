@@ -370,7 +370,7 @@ class Cart(ModelSQL):
         return self.sale._add_or_update(product_id, quantity, action)
 
     @classmethod
-    @route('/cart/delete/<int:line>')
+    @route('/cart/delete/<int:line>', methods=['DELETE', 'POST'])
     def delete_from_cart(cls, line):
         """
         Delete a line from the cart. The required argument in POST is:

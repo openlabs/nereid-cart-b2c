@@ -290,7 +290,7 @@ class TestCart(BaseTestCase):
 
             with app.test_client() as c:
                 self.login(c, 'email2@example.com', 'password2')
-                c.get('/cart/delete/%d' % line.id)
+                c.post('/cart/delete/%d' % line.id)
                 rv = c.get('/cart')
                 self.assertEqual(rv.status_code, 200)
                 self.assertEqual(rv.data, 'Cart:1,10,100.00')
