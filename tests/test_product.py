@@ -366,11 +366,11 @@ class BaseTestCase(NereidTestCase):
             'application_user': USER,
             'default_locale': self.locale_en_us.id,
             'guest_user': guest_user,
-            'countries': [('set', self.available_countries)],
+            'countries': [('add', self.available_countries)],
             'warehouse': warehouse,
             'stock_location': location,
-            'categories': [('set', [self.category.id])],
-            'currencies': [('set', [self.usd.id])],
+            'categories': [('add', [self.category.id])],
+            'currencies': [('add', [self.usd.id])],
         }])
 
         # Create product templates with products
@@ -525,6 +525,7 @@ class TestProduct(BaseTestCase):
                 'unit_price': Decimal('1'),
                 'currency': website.currencies[0].id,
                 'planned_date': datetime.date.today(),
+                'effective_date': datetime.date.today(),
                 'state': 'draft',
             }])
             stock2, = StockMove.create([{
@@ -537,6 +538,7 @@ class TestProduct(BaseTestCase):
                 'unit_price': Decimal('1'),
                 'currency': website.currencies[0].id,
                 'planned_date': datetime.date.today() + relativedelta(days=1),
+                'effective_date': datetime.date.today() + relativedelta(days=1),
                 'state': 'draft'
             }])
             StockMove.write([stock1], {
