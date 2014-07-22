@@ -12,7 +12,7 @@ from decimal import Decimal
 from functools import partial
 
 from nereid import jsonify, render_template, flash, request, login_required, \
-    url_for, current_user, route
+    url_for, current_user, route, context_processor
 from nereid.contrib.locale import make_lazy_gettext
 from nereid.globals import session, current_app
 from flask.ext.login import user_logged_in
@@ -61,6 +61,7 @@ class Cart(ModelSQL):
         return request.nereid_website.id
 
     @classmethod
+    @context_processor('get_cart_size')
     def cart_size(cls):
         "Returns the sum of quantities in the cart"
         cart = cls.open_cart()
@@ -190,6 +191,7 @@ class Cart(ModelSQL):
         return cls.create([values])[0]
 
     @classmethod
+    @context_processor('get_cart')
     def open_cart(cls, create_order=False):
         """Logic of this cart functionality is inspired by amazon. Most
         e-commerce systems handle cart in a different way and it is important
@@ -370,7 +372,7 @@ class Cart(ModelSQL):
         return self.sale._add_or_update(product_id, quantity, action)
 
     @classmethod
-    @route('/cart/delete/<int:line>')
+    @route('/cart/delete/<int:line>', methods=['DELETE', 'POST'])
     def delete_from_cart(cls, line):
         """
         Delete a line from the cart. The required argument in POST is:
@@ -390,20 +392,6 @@ class Cart(ModelSQL):
             return jsonify(message='OK')
 
         return redirect(url_for('nereid.cart.view_cart'))
-
-    @classmethod
-    def context_processor(cls):
-        """This function will be called by nereid to update
-        the template context. Must return a dictionary that the context
-        will be updated with.
-
-        This function is registered with nereid.template.context_processor
-        in xml code
-        """
-        return {
-            'get_cart_size': cls.cart_size,
-            'get_cart': cls.open_cart,
-        }
 
     @staticmethod
     @user_logged_in.connect

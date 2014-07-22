@@ -1,11 +1,12 @@
 #!/usr/bin/env python
 # This file is part of Tryton.  The COPYRIGHT file at the top level of
 # this repository contains the full copyright notices and license terms.
-
-from setuptools import setup, Command
+import sys
 import re
 import os
 import ConfigParser
+import unittest
+from setuptools import setup, Command
 
 
 class XMLTests(Command):
@@ -80,6 +81,36 @@ class RunAudit(Command):
             sys.exit(0)
 
 
+class SQLiteTest(Command):
+    """
+    Run the tests on SQLite
+    """
+    description = "Run tests on SQLite"
+
+    user_options = []
+
+    def initialize_options(self):
+        pass
+
+    def finalize_options(self):
+        pass
+
+    def run(self):
+        if self.distribution.tests_require:
+            self.distribution.fetch_build_eggs(self.distribution.tests_require)
+
+        from trytond.config import CONFIG
+        CONFIG['db_type'] = 'sqlite'
+        os.environ['DB_NAME'] = ':memory:'
+
+        from tests import suite
+        test_result = unittest.TextTestRunner(verbosity=3).run(suite())
+
+        if test_result.wasSuccessful():
+            sys.exit(0)
+        sys.exit(-1)
+
+
 def read(fname):
     return open(os.path.join(os.path.dirname(__file__), fname)).read()
 
@@ -95,10 +126,9 @@ minor_version = int(minor_version)
 
 requires = [
     'blinker',
-    'trytond_nereid>3.0.7.0, <3.1'
 ]
 for dep in info.get('depends', []):
-    if not re.match(r'(ir|res|webdav|nereid)(\W|$)', dep):
+    if not re.match(r'(ir|res|webdav)(\W|$)', dep):
         requires.append(
             'trytond_%s >= %s.%s, < %s.%s' % (
                 dep, major_version, minor_version, major_version,
@@ -110,8 +140,6 @@ requires.append(
         major_version, minor_version, major_version, minor_version + 1
     )
 )
-# Explicitly add version of nereid which this module depends on
-requires.append('trytond_nereid>=3.0.4.2,<3.1')
 
 setup(
     name='trytond_nereid_cart_b2c',
@@ -155,5 +183,6 @@ setup(
     cmdclass={
         'xmltests': XMLTests,
         'audit': RunAudit,
+        'test': SQLiteTest,
     },
 )
