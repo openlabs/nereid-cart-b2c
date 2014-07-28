@@ -44,6 +44,11 @@ class Website:
         ], help="Stock location to be used to check availability"
     )
 
+    #: Guest user to identify guest carts
+    guest_user = fields.Many2One(
+        'nereid.user', 'Guest user', required=True
+    )
+
     @classmethod
     def __setup__(cls):
         super(Website, cls).__setup__()
