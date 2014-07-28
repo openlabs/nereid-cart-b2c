@@ -49,6 +49,16 @@ class Website:
         'nereid.user', 'Guest user', required=True
     )
 
+    #: Payment term used for cart sale
+    payment_term = fields.Many2One(
+        'account.invoice.payment_term', 'Payment Term', required=True
+    )
+
+    @staticmethod
+    def default_payment_term():
+        Sale = Pool().get('sale.sale')
+        return Sale.default_payment_term()
+
     @classmethod
     def __setup__(cls):
         super(Website, cls).__setup__()

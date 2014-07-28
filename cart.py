@@ -305,6 +305,7 @@ class Cart(ModelSQL):
             'website': request.nereid_website.id,
             'nereid_user': user.id,
             'warehouse': request.nereid_website.warehouse.id,
+            'payment_term': request.nereid_website.payment_term,
         }
         self.sale = Sale.create([sale_values])[0]
         self.save()
