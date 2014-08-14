@@ -1,0 +1,11 @@
+psycopg2
+
+# Install latest packages from github.
+https://github.com/openlabs/nereid/archive/develop.tar.gz
+https://github.com/openlabs/nereid-catalog/archive/develop.tar.gz
+
+# Install zikzakmedia's sale shop module from bitbucket.
+https://bitbucket.org/zikzakmedia/trytond-sale_shop/get/default.tar.gz
+
+# Install this package itself
+.

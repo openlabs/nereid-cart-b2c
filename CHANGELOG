@@ -1,0 +1,25 @@
+Version 3.2.1.0
+===============
+
+* Depend on sale_shop module
+
+  The sale shop module implements the concept of real world shops
+  which have a different warehouse they send inventory from, the
+  different price list and everything else needed for a shop to
+  function independently. The changes to website (previously) did
+  this too. However, from this version such information will be
+  fetched from the shop.
+
+  Warning: There is no migration for this. You will have to create
+  a new shop on your own and update your website to have the new
+  pricelist.
+
+* Price list for anonymous users
+
+  Previous versions used the pricelist of the guest user (if one
+  was defined) to price products for guest users. From this version,
+  the anonymous user prices are the prices of the shop (from the
+  price list of shop).
+
+  Migration: Ensure that you set the pricelist of the shop as the
+  same pricelist that was set for the guest user.

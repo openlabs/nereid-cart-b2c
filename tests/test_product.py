@@ -4,7 +4,7 @@
 
     Test product features
 
-    :copyright: (c) 2010-2013 by Openlabs Technologies & Consulting (P) LTD
+    :copyright: (c) 2010-2014 by Openlabs Technologies & Consulting (P) LTD
     :license: GPLv3, see LICENSE for more details
 '''
 import json
@@ -25,46 +25,18 @@ class BaseTestCase(NereidTestCase):
     Test the sale_price method of Product
     """
     def setUp(self):
-
-        # Install the company module and create a company first
-        # to avoid a catch 22 situation where the payable and receivable
-        # accounts are required once the nereid_cart_b2c modules are
-        # installed.
-        trytond.tests.test_tryton.install_module('company')
+        trytond.tests.test_tryton.install_module('nereid_cart_b2c')
 
         self.Currency = POOL.get('currency.currency')
         self.Company = POOL.get('company.company')
         self.Party = POOL.get('party.party')
-
-        with Transaction().start(DB_NAME, USER, CONTEXT) as txn:
-            if not self.Company.search([]):
-                self.usd, = self.Currency.create([{
-                    'name': 'US Dollar',
-                    'code': 'USD',
-                    'symbol': '$',
-                }])
-                self.party, = self.Party.create([{
-                    'name': 'Openlabs',
-                }])
-                self.company, = self.Company.create([{
-                    'party': self.party.id,
-                    'currency': self.usd
-                }])
-                txn.cursor.commit()
-            else:
-                self.usd, = self.Currency.search([])
-                self.company, = self.Company.search([])
-
-        # Now install the cart module to be tested
-        trytond.tests.test_tryton.install_module('nereid_cart_b2c')
-
         self.Sale = POOL.get('sale.sale')
         self.Cart = POOL.get('nereid.cart')
         self.Product = POOL.get('product.product')
         self.ProductTemplate = POOL.get('product.template')
-        self.UrlMap = POOL.get('nereid.url_map')
         self.Language = POOL.get('ir.lang')
         self.NereidWebsite = POOL.get('nereid.website')
+        self.SaleShop = POOL.get('sale.shop')
         self.Uom = POOL.get('product.uom')
         self.Country = POOL.get('country.country')
         self.Subdivision = POOL.get('country.subdivision')
@@ -85,24 +57,7 @@ class BaseTestCase(NereidTestCase):
                 '{{cart.sale.total_amount}}',
             'product.jinja':
                 '{{ product.sale_price(product.id) }}',
-            'category.jinja': ' ',
         }
-
-    def _create_product_category(self, name, vlist):
-        """
-        Creates a product category
-
-        Name is mandatory while other value may be provided as keyword
-        arguments
-
-        :param name: Name of the product category
-        :param vlist: List of dictionaries of values to create
-        """
-        Category = POOL.get('product.category')
-
-        for values in vlist:
-            values['name'] = name
-        return Category.create(vlist)
 
     def _create_product_template(self, name, vlist, uri, uom=u'Unit'):
         """
@@ -283,6 +238,19 @@ class BaseTestCase(NereidTestCase):
         """
         Setup the defaults
         """
+        with Transaction().set_context(company=None):
+            self.usd, = self.Currency.create([{
+                'name': 'US Dollar',
+                'code': 'USD',
+                'symbol': '$',
+            }])
+            self.party, = self.Party.create([{
+                'name': 'Openlabs',
+            }])
+            self.company, = self.Company.create([{
+                'party': self.party.id,
+                'currency': self.usd
+            }])
 
         self.User.write(
             [self.User(USER)], {
@@ -297,13 +265,12 @@ class BaseTestCase(NereidTestCase):
         # Create Chart of Accounts
         self._create_coa_minimal(company=self.company.id)
         # Create a payment term
-        self._create_payment_term()
+        payment_term, = self._create_payment_term()
 
-        guest_price_list, user_price_list = self._create_pricelists()
+        shop_price_list, user_price_list = self._create_pricelists()
 
         party1, = self.Party.create([{
             'name': 'Guest User',
-            'sale_price_list': guest_price_list
         }])
 
         party2, = self.Party.create([{
@@ -341,17 +308,12 @@ class BaseTestCase(NereidTestCase):
         self._create_countries()
         self.available_countries = self.Country.search([], limit=5)
 
-        self.category, = self._create_product_category(
-            'Category', [{'uri': 'category'}]
-        )
-
         warehouse, = self.Location.search([
             ('type', '=', 'warehouse')
         ], limit=1)
         location, = self.Location.search([
             ('type', '=', 'storage')
         ], limit=1)
-        url_map, = self.UrlMap.search([], limit=1)
         en_us, = self.Language.search([('code', '=', 'en_US')])
 
         self.locale_en_us, = self.Locale.create([{
@@ -359,17 +321,25 @@ class BaseTestCase(NereidTestCase):
             'language': en_us.id,
             'currency': self.usd.id,
         }])
+
+        self.shop, = self.SaleShop.create([{
+            'name': 'Default Shop',
+            'price_list': shop_price_list,
+            'warehouse': warehouse,
+            'payment_term': payment_term,
+            'company': self.company.id,
+            'users': [('add', [USER])]
+        }])
+        self.User.set_preferences({'shop': self.shop})
+
         self.NereidWebsite.create([{
             'name': 'localhost',
-            'url_map': url_map,
+            'shop': self.shop,
             'company': self.company.id,
             'application_user': USER,
             'default_locale': self.locale_en_us.id,
             'guest_user': guest_user,
             'countries': [('add', self.available_countries)],
-            'warehouse': warehouse,
-            'stock_location': location,
-            'categories': [('add', [self.category.id])],
             'currencies': [('add', [self.usd.id])],
         }])
 
@@ -377,7 +347,6 @@ class BaseTestCase(NereidTestCase):
         self.template1, = self._create_product_template(
             'product-1',
             [{
-                'category': self.category.id,
                 'type': 'goods',
                 'salable': True,
                 'list_price': Decimal('10'),
@@ -390,7 +359,6 @@ class BaseTestCase(NereidTestCase):
         self.template2, = self._create_product_template(
             'product-2',
             [{
-                'category': self.category.id,
                 'type': 'goods',
                 'salable': True,
                 'list_price': Decimal('15'),

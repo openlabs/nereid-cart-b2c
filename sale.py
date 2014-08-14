@@ -9,7 +9,8 @@
 '''
 from trytond.pool import Pool, PoolMeta
 from trytond.model import fields
-from nereid import request, current_user
+from trytond.transaction import Transaction
+from nereid import current_user
 from nereid.ctx import has_request_context
 
 __all__ = ['Sale', 'SaleLine']
@@ -39,35 +40,32 @@ class Sale:
         return False
 
     @staticmethod
-    def default_price_list(user=None):
+    def default_price_list():
         """Get the pricelist of active user. In the
         event that the logged in user does not have a pricelist set against
-        the user, the guest user's pricelist is chosen.
+        the user, the shop's pricelist is chosen.
 
         :param user: active record of the nereid user
         """
+        User = Pool().get('res.user')
+        user = User(Transaction().user)
+        shop_price_list = user.shop.price_list.id if user.shop else None
+
         if not has_request_context():
             # Not a nereid request
-            return None
+            return shop_price_list
 
-        if user is not None and user.party.sale_price_list:
-            # If a user was provided and the user has a pricelist, use
-            # that
-            return user.party.sale_price_list.id
+        # If control reaches here, then this is a nereid request. Lets try
+        # and personalise the pricelist of the user logged in.
+        if current_user.is_anonymous():
+            # Sorry anonymous users, you get the shop price
+            return shop_price_list
 
-        if not current_user.is_anonymous() and \
-                current_user.party.sale_price_list:
-            # If the currently logged in user has a pricelist defined, use
-            # that
+        if current_user.party.sale_price_list:
+            # There is a sale pricelist for the specific user's party.
             return current_user.party.sale_price_list.id
 
-        # Since there is no pricelist for the user, use the guest user's
-        # pricelist if one is defined.
-        guest_user = request.nereid_website.guest_user
-        if guest_user.party.sale_price_list:
-            return guest_user.party.sale_price_list.id
-
-        return None
+        return shop_price_list
 
     def refresh_taxes(self):
         '''
