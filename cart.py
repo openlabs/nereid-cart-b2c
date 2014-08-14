@@ -293,12 +293,9 @@ class Cart(ModelSQL):
         if party is None:
             party = user.party
 
-        price_list = Sale.default_price_list(user)
-
         sale_values = {
             'party': party.id,
             'currency': request.nereid_currency.id,
-            'price_list': price_list,
             'company': request.nereid_website.company.id,
             'is_cart': True,
             'state': 'draft',

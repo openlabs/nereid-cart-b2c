@@ -2,7 +2,7 @@
 '''
     nereid_cart.website
 
-    :copyright: (c) 2010-2013 by Openlabs Technologies & Consulting (P) LTD
+    :copyright: (c) 2010-2014 by Openlabs Technologies & Consulting (P) LTD
     :license: GPLv3, see LICENSE for more details
 '''
 from functools import partial
@@ -12,9 +12,11 @@ from nereid import render_template, login_required, request, current_user, \
     route
 from nereid.contrib.pagination import Pagination
 from nereid.globals import session
+from trytond import backend
 from trytond.model import fields
 from trytond.pool import Pool, PoolMeta
 from trytond.pyson import Eval
+from trytond.transaction import Transaction
 
 
 __all__ = ['Website']
@@ -27,21 +29,37 @@ class Website:
     """
     __name__ = 'nereid.website'
 
+    #: The shop in which the sales will be registered. It is recommended
+    #: to create a different shop for each website. The shop's price_list,
+    #: warehouse and sale order sequences are respected by nereid cart
+    #:
+    #: .. versionadded::3.2.1.0
+    #:
+    shop = fields.Many2One(
+        'sale.shop', 'Shop', required=True,
+        domain=[('users', '=', Eval('application_user'))],
+        depends=['application_user']
+    )
+
     #: The warehouse to be used in the sale order when an order on this site is
     #: created
-    warehouse = fields.Many2One(
-        'stock.location', 'Warehouse',
-        domain=[('type', '=', 'warehouse')], required=True
+    #:
+    #: .. versionchanged::3.2.1.0
+    #:
+    #:     This information is now fetched from shop
+    warehouse = fields.Function(
+        fields.Many2One('stock.location', 'Warehouse'),
+        'get_fields_from_shop'
     )
 
     #: Stock location to be used when calculating the stock.
-    stock_location = fields.Many2One(
-        'stock.location', 'Stock Location', required=True,
-        depends=['warehouse'],
-        domain=[
-            ('type', '=', 'storage'),
-            ('parent', 'child_of', Eval('warehouse'))
-        ], help="Stock location to be used to check availability"
+    #:
+    #: .. versionchanged::3.2.1.0
+    #:
+    #:     This information is now fetched from shop
+    stock_location = fields.Function(
+        fields.Many2One('stock.location', 'Stock Location'),
+        'get_fields_from_shop'
     )
 
     #: Guest user to identify guest carts
@@ -50,19 +68,41 @@ class Website:
     )
 
     #: Payment term used for cart sale
-    payment_term = fields.Many2One(
-        'account.invoice.payment_term', 'Payment Term', required=True
+    #:
+    #: .. versionchanged::3.2.1.0
+    #:
+    #:     This information is now fetched from shop
+    payment_term = fields.Function(
+        fields.Many2One('account.invoice.payment_term', 'Payment Term'),
+        'get_fields_from_shop'
     )
-
-    @staticmethod
-    def default_payment_term():
-        Sale = Pool().get('sale.sale')
-        return Sale.default_payment_term()
 
     @classmethod
     def __setup__(cls):
         super(Website, cls).__setup__()
         cls.per_page = 10
+
+    @classmethod
+    def __register__(cls, module_name):
+        super(Website, cls).__register__(module_name)
+
+        TableHandler = backend.get('TableHandler')
+        cursor = Transaction().cursor
+
+        table = TableHandler(cursor, cls, module_name)
+
+        table.not_null_action('warehouse', action='remove')
+        table.not_null_action('stock_location', action='remove')
+        table.not_null_action('payment_term', action='remove')
+
+    def get_fields_from_shop(self, name):
+        """
+        Return the information from the shop assigned to the website.
+        """
+        if name == 'stock_location':
+            return self.shop.warehouse.storage_location.id
+
+        return getattr(self.shop, name).id
 
     @classmethod
     def account_context(cls):

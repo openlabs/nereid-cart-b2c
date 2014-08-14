@@ -120,13 +120,10 @@ class Product:
                     be found
         :return: JSON object
         """
-        allowed_categories = request.nereid_website.get_categories() + [None]
-
         try:
             product, = cls.search([
                 ('displayed_on_eshop', '=', True),
                 ('uri', '=', uri),
-                ('category', 'in', allowed_categories),
             ])
         except ValueError:
             return abort(404)

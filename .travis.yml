@@ -4,9 +4,7 @@ python:
 before_install:
   - sudo apt-get install python-lxml
 install:
-  - pip install flake8
-  - python setup.py install
-  - pip install coveralls
+  - pip install -r dev_requirements.txt
 script:
   - coverage run setup.py test
   - flake8 .
