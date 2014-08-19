@@ -18,11 +18,9 @@
                           <field name="guest_user"/>
                   </xpath>
                   <xpath expr="/form/notebook/page[@id='catalog']" 
-                        position="inside">
-                          <label name="warehouse"/>
-                          <field name="warehouse"/>
-                          <label name="stock_location"/>
-                          <field name="stock_location"/>
+                      position="inside">
+                          <label name="shop"/>
+                          <field name="shop"/>
                   </xpath>
               </data>
               ]]>
