@@ -9,7 +9,7 @@ from functools import partial
 
 from babel import numbers
 from nereid import render_template, login_required, request, current_user, \
-    route
+    route, url_for
 from nereid.contrib.pagination import Pagination
 from nereid.globals import session
 from trytond import backend
@@ -245,6 +245,9 @@ class Website:
                     'amount': currency_format(line.amount),
                     'image': line.product.image_sets[0].thumbnail.url()
                         if line.product.image_sets else None,
+                    'remove_url': url_for(
+                        'nereid.cart.delete_from_cart', line=line.id
+                    ),
                 } for line in cart.sale.lines],
                 'empty': len(cart.sale.lines) > 0,
                 'total_amount': currency_format(cart.sale.total_amount),
