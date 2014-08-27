@@ -12,12 +12,15 @@
           <field name="arch" type="xml">
               <![CDATA[
               <data>
-                  <xpath expr="/form/notebook/page[@id='catalog']/field[@name='categories']" 
-                        position="before">
-                          <label name="warehouse"/>
-                          <field name="warehouse"/>
-                          <label name="stock_location"/>
-                          <field name="stock_location"/>
+                  <xpath expr="/form/notebook/page[@id='general']/label[@name='timezone']"
+                      position="before">
+                          <label name="guest_user"/>
+                          <field name="guest_user"/>
+                  </xpath>
+                  <xpath expr="/form/notebook/page[@id='catalog']" 
+                      position="inside">
+                          <label name="shop"/>
+                          <field name="shop"/>
                   </xpath>
               </data>
               ]]>
