@@ -234,6 +234,23 @@ class BaseTestCase(NereidTestCase):
         }])
         return guest_price_list.id, user_price_list.id
 
+    def create_website(self):
+        """
+        Creates a website. Since the fields required to make this could
+        change depending on modules installed and this is a base test case
+        the creation is separated to another method
+        """
+        return self.NereidWebsite.create([{
+            'name': 'localhost',
+            'shop': self.shop,
+            'company': self.company.id,
+            'application_user': USER,
+            'default_locale': self.locale_en_us.id,
+            'guest_user': self.guest_user,
+            'countries': [('add', self.available_countries)],
+            'currencies': [('add', [self.usd.id])],
+        }])
+
     def setup_defaults(self):
         """
         Setup the defaults
@@ -283,7 +300,7 @@ class BaseTestCase(NereidTestCase):
         }])
 
         # Create users and assign the pricelists to them
-        guest_user, = self.NereidUser.create([{
+        self.guest_user, = self.NereidUser.create([{
             'party': party1.id,
             'display_name': 'Guest User',
             'email': 'guest@openlabs.co.in',
@@ -332,16 +349,7 @@ class BaseTestCase(NereidTestCase):
         }])
         self.User.set_preferences({'shop': self.shop})
 
-        self.NereidWebsite.create([{
-            'name': 'localhost',
-            'shop': self.shop,
-            'company': self.company.id,
-            'application_user': USER,
-            'default_locale': self.locale_en_us.id,
-            'guest_user': guest_user,
-            'countries': [('add', self.available_countries)],
-            'currencies': [('add', [self.usd.id])],
-        }])
+        self.create_website()
 
         # Create product templates with products
         self.template1, = self._create_product_template(
