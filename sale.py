@@ -126,6 +126,7 @@ class Sale:
                 '_parent_sale.party': self.party.id,
                 'sale': self.id,
                 'type': 'line',
+                'sequence': 10,
                 'quantity': quantity,
                 'unit': None,
                 'description': None,
