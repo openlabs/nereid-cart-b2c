@@ -116,7 +116,7 @@ class Sale:
                 if '.' not in key:
                     new_values[key] = value
                 if key == 'taxes' and value:
-                    new_values[key] = [('set', value)]
+                    new_values[key] = [('add', value)]
             SaleLine.write([order_line], new_values)
             return order_line
         else:
@@ -140,7 +140,7 @@ class Sale:
                 if '.' not in key:
                     new_values[key] = value
                 if key == 'taxes' and value:
-                    new_values[key] = [('set', value)]
+                    new_values[key] = [('add', value)]
             return SaleLine.create([new_values])[0]
 
 
@@ -154,5 +154,5 @@ class SaleLine:
         values = self.on_change_product()
         if 'taxes' in values:
             SaleLine.write([self], {
-                'taxes': [('set', values['taxes'])]
+                'taxes': [('add', values['taxes'])]
             })
