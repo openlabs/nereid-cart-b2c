@@ -445,6 +445,42 @@ class TestCart(BaseTestCase):
                 rv = c.get('/')
                 self.assert_('This product is not for sale' in rv.data)
 
+    def test_0130_cart_sale_taxes(self):
+        """
+        Test taxes and sale.refresh_taxes
+        """
+        with Transaction().start(DB_NAME, USER, CONTEXT):
+            self.setup_defaults()
+            app = self.get_app()
+            self.template1.customer_taxes = [self.sale_tax.id]
+            self.template1.save()
+
+            with app.test_client() as c:
+                self.login(c, 'email@example.com', 'password')
+
+                c.post(
+                    '/cart/add',
+                    data={
+                        'product': self.product1.id, 'quantity': 7
+                    }
+                )
+                rv = c.get('/cart')
+                self.assertEqual(rv.status_code, 200)
+                # 70 (10 x 7) + 3.5 (5% Tax) = 73.50
+                self.assertEqual(rv.data, 'Cart:1,7,73.50')
+
+                c.post('/cart/add', data={
+                    'product': self.product1.id, 'quantity': 7
+                })
+                rv = c.get('/cart')
+                self.assertEqual(rv.status_code, 200)
+                # 70 (10 x 7) + 3.5 (5% Tax) = 73.50
+                self.assertEqual(rv.data, 'Cart:1,7,73.50')
+
+                sale, = self.Sale.search([])
+                sale.refresh_taxes()  # Refresh Taxes
+                self.assertEqual(sale.tax_amount, Decimal('3.50'))
+
 
 def suite():
     "Cart test suite"
