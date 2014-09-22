@@ -115,8 +115,6 @@ class Sale:
             for key, value in values.iteritems():
                 if '.' not in key:
                     new_values[key] = value
-                if key == 'taxes' and value:
-                    new_values[key] = [('add', value)]
             SaleLine.write([order_line], new_values)
             return order_line
         else:
@@ -149,10 +147,7 @@ class SaleLine:
 
     def refresh_taxes(self):
         "Refresh taxes of sale line"
-        SaleLine = Pool().get('sale.line')
-
         values = self.on_change_product()
         if 'taxes' in values:
-            SaleLine.write([self], {
-                'taxes': [('add', values['taxes'])]
-            })
+            self.taxes = values['taxes']
+            self.save()
