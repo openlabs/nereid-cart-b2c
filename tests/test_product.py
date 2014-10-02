@@ -47,6 +47,7 @@ class BaseTestCase(NereidTestCase):
         self.Location = POOL.get('stock.location')
         self.Party = POOL.get('party.party')
         self.Locale = POOL.get('nereid.website.locale')
+        self.Tax = POOL.get('account.tax')
 
         self.templates = {
             'home.jinja': '{{get_flashed_messages()}}',
@@ -337,6 +338,16 @@ class BaseTestCase(NereidTestCase):
             'code': 'en_US',
             'language': en_us.id,
             'currency': self.usd.id,
+        }])
+
+        self.sale_tax, = self.Tax.create([{
+            'name': 'Sales Tax',
+            'description': 'Sales Tax',
+            'type': 'percentage',
+            'rate': Decimal('0.05'),  # Rate 5%
+            'company': self.company.id,
+            'invoice_account': self._get_account_by_kind('other').id,
+            'credit_note_account': self._get_account_by_kind('other').id,
         }])
 
         self.shop, = self.SaleShop.create([{
