@@ -381,13 +381,21 @@ class Cart(ModelSQL):
         """
         SaleLine = Pool().get('sale.line')
 
-        sale_line = SaleLine(line)
-        assert sale_line.sale.id == cls.open_cart().sale.id
-        SaleLine.delete([sale_line])
-        flash(_('The order item has been successfully removed'))
+        try:
+            sale_line, = SaleLine.search([
+                ('id', '=', line),
+                ('sale', '=', cls.open_cart().sale.id),
+            ])
+        except ValueError:
+            message = 'Looks like the item is already deleted.'
+        else:
+            SaleLine.delete([sale_line])
+            message = 'The order item has been successfully removed.'
+
+        flash(_(message))
 
         if request.is_xhr:
-            return jsonify(message='OK')
+            return jsonify(message=message)
 
         return redirect(url_for('nereid.cart.view_cart'))
 
