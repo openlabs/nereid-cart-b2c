@@ -147,7 +147,9 @@ class SaleLine:
 
     def refresh_taxes(self):
         "Refresh taxes of sale line"
-        values = self.on_change_product()
+        SaleLine = Pool().get('sale.line')
+
+        values = SaleLine(self.id).on_change_product()
         if 'taxes' in values:
             self.taxes = values['taxes']
             self.save()
