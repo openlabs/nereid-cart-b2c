@@ -295,6 +295,13 @@ class TestCart(BaseTestCase):
                 self.assertEqual(rv.status_code, 200)
                 self.assertEqual(rv.data, 'Cart:1,10,100.00')
 
+                # Test that ValueError is not raised if someone tries to delete
+                # already removed item
+                c.post('/cart/delete/%d' % line.id)
+                rv = c.get('/cart')
+                self.assertEqual(rv.status_code, 200)
+                self.assertEqual(rv.data, 'Cart:1,10,100.00')
+
     def test_0070_clear_cart(self):
         """
         Clear the cart completely
