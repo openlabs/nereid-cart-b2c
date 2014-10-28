@@ -105,7 +105,7 @@ class Cart(ModelSQL):
             )
             return jsonify(cart={
                 'lines': [{
-                    'product': l.product.name,
+                    'product': l.product and l.product.name or None,
                     'quantity': number_format(l.quantity),
                     'unit': l.unit.symbol,
                     'unit_price': currency_format(l.unit_price),
