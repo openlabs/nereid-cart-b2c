@@ -12,7 +12,7 @@ from decimal import Decimal
 from functools import partial
 
 from nereid import jsonify, render_template, flash, request, login_required, \
-    url_for, current_user, route, context_processor
+    url_for, current_user, route, context_processor, abort
 from nereid.contrib.locale import make_lazy_gettext
 from nereid.globals import session, current_app
 from flask.ext.login import user_logged_in
@@ -381,10 +381,14 @@ class Cart(ModelSQL):
         """
         SaleLine = Pool().get('sale.line')
 
+        cart = cls.open_cart()
+        if not cart.sale:
+            abort(404)
+
         try:
             sale_line, = SaleLine.search([
                 ('id', '=', line),
-                ('sale', '=', cls.open_cart().sale.id),
+                ('sale', '=', cart.sale.id),
             ])
         except ValueError:
             message = 'Looks like the item is already deleted.'
