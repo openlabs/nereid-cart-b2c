@@ -12,7 +12,7 @@ from decimal import Decimal
 from functools import partial
 
 from nereid import jsonify, render_template, flash, request, login_required, \
-    url_for, current_user, route, context_processor
+    url_for, current_user, route, context_processor, abort
 from nereid.contrib.locale import make_lazy_gettext
 from nereid.globals import session, current_app
 from flask.ext.login import user_logged_in
@@ -105,7 +105,7 @@ class Cart(ModelSQL):
             )
             return jsonify(cart={
                 'lines': [{
-                    'product': l.product.name,
+                    'product': l.product and l.product.name or None,
                     'quantity': number_format(l.quantity),
                     'unit': l.unit.symbol,
                     'unit_price': currency_format(l.unit_price),
@@ -146,7 +146,7 @@ class Cart(ModelSQL):
         self.__class__.delete([self])
 
     @classmethod
-    @route('/cart/clear')
+    @route('/cart/clear', methods=['POST'])
     def clear_cart(cls):
         """
         Clears the current cart and redirects to shopping cart page
@@ -219,8 +219,12 @@ class Cart(ModelSQL):
 
         if cart:
             cart.sanitise_state(user_id)
-        else:
+        elif create_order:
             cart = cls.create_cart(user_id)
+        else:
+            # Return an instance of the unsaved active record to keep the api
+            # simple and sweet.
+            return cls(user=user_id, sale=None)
 
         # Check if the order needs to be created
         if create_order and not cart.sale:
@@ -381,10 +385,14 @@ class Cart(ModelSQL):
         """
         SaleLine = Pool().get('sale.line')
 
+        cart = cls.open_cart()
+        if not cart.sale:
+            abort(404)
+
         try:
             sale_line, = SaleLine.search([
                 ('id', '=', line),
-                ('sale', '=', cls.open_cart().sale.id),
+                ('sale', '=', cart.sale.id),
             ])
         except ValueError:
             message = 'Looks like the item is already deleted.'
