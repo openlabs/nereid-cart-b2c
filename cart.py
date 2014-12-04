@@ -146,7 +146,7 @@ class Cart(ModelSQL):
         self.__class__.delete([self])
 
     @classmethod
-    @route('/cart/clear')
+    @route('/cart/clear', methods=['POST'])
     def clear_cart(cls):
         """
         Clears the current cart and redirects to shopping cart page
@@ -219,8 +219,12 @@ class Cart(ModelSQL):
 
         if cart:
             cart.sanitise_state(user_id)
-        else:
+        elif create_order:
             cart = cls.create_cart(user_id)
+        else:
+            # Return an instance of the unsaved active record to keep the api
+            # simple and sweet.
+            return cls(user=user_id, sale=None)
 
         # Check if the order needs to be created
         if create_order and not cart.sale:
