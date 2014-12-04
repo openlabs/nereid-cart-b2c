@@ -146,7 +146,7 @@ class Cart(ModelSQL):
         self.__class__.delete([self])
 
     @classmethod
-    @route('/cart/clear')
+    @route('/cart/clear', methods=['POST'])
     def clear_cart(cls):
         """
         Clears the current cart and redirects to shopping cart page
