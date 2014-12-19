@@ -96,7 +96,7 @@ class TestCart(BaseTestCase):
     def test_0020_cart_diff_apps(self):
         """
         Call the cart with two different applications
-        and assert they are not equal
+        and assert they are different but same empty carts
         """
         with Transaction().start(DB_NAME, USER, CONTEXT):
             self.setup_defaults()
@@ -112,7 +112,42 @@ class TestCart(BaseTestCase):
                 self.assertEqual(rv2.status_code, 200)
                 data2 = rv2.data
 
-        self.assertTrue(data1 != data2)
+            # Both are empty active records
+            self.assertTrue(data1 == data2 == 'Cart:None,0,')
+
+    def test_0025_cart_diff_apps(self):
+        """
+        Call the cart with two different applications
+        and assert they are not equal. They become different
+        only when
+        """
+        with Transaction().start(DB_NAME, USER, CONTEXT):
+            self.setup_defaults()
+            app = self.get_app()
+
+            with app.test_client() as c1:
+                c1.post(
+                    '/cart/add',
+                    data={
+                        'product': self.product1.id, 'quantity': 5
+                    }
+                )
+                rv1 = c1.get('/cart')
+                self.assertEqual(rv1.status_code, 200)
+                data1 = rv1.data
+
+            with app.test_client() as c2:
+                c2.post(
+                    '/cart/add',
+                    data={
+                        'product': self.product1.id, 'quantity': 5
+                    }
+                )
+                rv2 = c2.get('/cart')
+                self.assertEqual(rv2.status_code, 200)
+                data2 = rv2.data
+
+            self.assertTrue(data1 != data2)
 
     def test_0030_add_items_n_login(self):
         """User browses cart, adds items and logs in
@@ -214,7 +249,7 @@ class TestCart(BaseTestCase):
                 self.assertEqual(response.status_code, 302)
                 rv = c.get('/cart')
                 self.assertEqual(rv.status_code, 200)
-                self.assertEqual(rv.data, 'Cart:2,0,')
+                self.assertEqual(rv.data, 'Cart:None,0,')
 
     def test_0050_same_user_two_session(self):
         """
@@ -328,10 +363,10 @@ class TestCart(BaseTestCase):
 
             with app.test_client() as c:
                 self.login(c, 'email2@example.com', 'password2')
-                c.get('/cart/clear')
+                c.post('/cart/clear')
                 rv = c.get('/cart')
                 self.assertEqual(rv.status_code, 200)
-                self.assertEqual(rv.data, 'Cart:2,0,')
+                self.assertEqual(rv.data, 'Cart:None,0,')
 
             self.assertFalse(self.Sale.search([('id', '=', sale)]))
 
