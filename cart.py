@@ -143,7 +143,9 @@ class Cart(ModelSQL):
         if self.sale:
             Sale.cancel([self.sale])
             Sale.delete([self.sale])
-        self.__class__.delete([self])
+        if self.id is not None:
+            # An unsaved active record ?
+            self.__class__.delete([self])
 
     @classmethod
     @route('/cart/clear', methods=['POST'])
