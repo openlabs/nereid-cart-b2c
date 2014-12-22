@@ -5,6 +5,7 @@ import unittest
 
 from test_cart import TestCart
 from test_product import TestProduct
+from test_website import TestWebsite
 
 
 def suite():
@@ -13,6 +14,7 @@ def suite():
     suite.addTests([
         unittest.TestLoader().loadTestsFromTestCase(TestCart),
         unittest.TestLoader().loadTestsFromTestCase(TestProduct),
+        unittest.TestLoader().loadTestsFromTestCase(TestWebsite),
     ])
     return suite
 

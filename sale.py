@@ -7,10 +7,13 @@
     :copyright: (c) 2010-2014 by Openlabs Technologies & Consulting (P) Ltd.
     :license: GPLv3, see LICENSE for more details
 '''
+from functools import partial
+from babel import numbers
+
 from trytond.pool import Pool, PoolMeta
 from trytond.model import fields
 from trytond.transaction import Transaction
-from nereid import current_user
+from nereid import current_user, url_for, request
 from nereid.ctx import has_request_context
 
 __all__ = ['Sale', 'SaleLine']
@@ -153,3 +156,29 @@ class SaleLine:
         if 'taxes' in values:
             self.taxes = values['taxes']
             self.save()
+
+    def serialize(self, purpose=None):
+        """
+        Serialize SaleLine data
+        """
+        res = {}
+        currency_format = partial(
+            numbers.format_currency, currency=self.sale.currency.code,
+            locale=request.nereid_language.code
+        )
+        number_format = partial(
+            numbers.format_number, locale=request.nereid_language.code
+        )
+        if purpose == 'cart':
+            res.update({
+                'id': self.id,
+                'product': self.product.serialize(purpose),
+                'quantity': number_format(self.quantity),
+                'unit': self.unit.symbol,
+                'unit_price': currency_format(self.unit_price),
+                'amount': currency_format(self.amount),
+                'remove_url': url_for(
+                    'nereid.cart.delete_from_cart', line=self.id
+                ),
+            })
+        return res

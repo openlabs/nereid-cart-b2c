@@ -9,7 +9,7 @@ from functools import partial
 
 from babel import numbers
 from nereid import render_template, login_required, request, current_user, \
-    route, url_for
+    route
 from nereid.contrib.pagination import Pagination
 from nereid.globals import session
 from trytond import backend
@@ -232,23 +232,12 @@ class Website:
                 numbers.format_currency, currency=cart.sale.currency.code,
                 locale=request.nereid_language.code
             )
-            number_format = partial(
-                numbers.format_number, locale=request.nereid_language.code
-            )
 
             rv['cart'] = {
-                'lines': [{
-                    'product': line.product.name,
-                    'quantity': number_format(line.quantity),
-                    'unit': line.unit.symbol,
-                    'unit_price': currency_format(line.unit_price),
-                    'amount': currency_format(line.amount),
-                    'image': line.product.image_sets[0].thumbnail.url()
-                        if line.product.image_sets else None,
-                    'remove_url': url_for(
-                        'nereid.cart.delete_from_cart', line=line.id
-                    ),
-                } for line in cart.sale.lines],
+                'lines': [
+                    line.serialize(purpose='cart')
+                    for line in cart.sale.lines
+                ],
                 'empty': len(cart.sale.lines) > 0,
                 'total_amount': currency_format(cart.sale.total_amount),
                 'tax_amount': currency_format(cart.sale.tax_amount),

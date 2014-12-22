@@ -23,6 +23,22 @@ class Product:
     "Product extension for Nereid"
     __name__ = "product.product"
 
+    def serialize(self, purpose=None):
+        """
+        Serialize product data
+        """
+        if purpose == 'cart':
+            return {
+                'id': self.id,
+                'code': self.code,
+                'name': self.name,
+                'category': self.category and self.category.name or None,
+                'image': (
+                    self.image_sets[0].thumbnail.url() if self.image_sets else
+                    None
+                )
+            }
+
     def sale_price(self, quantity=0):
         """Return the Sales Price.
         A wrapper designed to work as a context variable in templating
