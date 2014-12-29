@@ -78,7 +78,7 @@ class Cart(ModelSQL):
         ]
 
     @classmethod
-    @route('/cart')
+    @route('/cart', readonly=False)
     def view_cart(cls):
         """Returns a view of the shopping cart
 
