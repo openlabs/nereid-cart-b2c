@@ -1,0 +1,128 @@
+# 
+msgid ""
+msgstr "Content-Type: text/plain; charset=utf-8\n"
+
+msgctxt "field:nereid.cart,create_date:"
+msgid "Create Date"
+msgstr "Erstellungsdatum"
+
+msgctxt "field:nereid.cart,create_uid:"
+msgid "Create User"
+msgstr "Erstellt durch"
+
+msgctxt "field:nereid.cart,id:"
+msgid "ID"
+msgstr "ID"
+
+msgctxt "field:nereid.cart,rec_name:"
+msgid "Name"
+msgstr "Name"
+
+msgctxt "field:nereid.cart,sale:"
+msgid "Sale Order"
+msgstr "Verkauf"
+
+msgctxt "field:nereid.cart,sessionid:"
+msgid "Session ID"
+msgstr "Sitzungs-ID"
+
+msgctxt "field:nereid.cart,user:"
+msgid "Cart owner"
+msgstr "Warenkorbbesitzer"
+
+msgctxt "field:nereid.cart,website:"
+msgid "Website"
+msgstr "Website"
+
+msgctxt "field:nereid.cart,write_date:"
+msgid "Write Date"
+msgstr "Zuletzt geändert"
+
+msgctxt "field:nereid.cart,write_uid:"
+msgid "Write User"
+msgstr "Letzte Änderung durch"
+
+msgctxt "field:nereid.website,payment_term:"
+msgid "Payment Term"
+msgstr "Zahlungsbedingung"
+
+msgctxt "field:nereid.website,shop:"
+msgid "Shop"
+msgstr "Filiale"
+
+msgctxt "field:nereid.website,stock_location:"
+msgid "Stock Location"
+msgstr "Lagerort"
+
+msgctxt "field:nereid.website,warehouse:"
+msgid "Warehouse"
+msgstr "Warenlager"
+
+msgctxt "field:sale.sale,is_cart:"
+msgid "Is Cart Order?"
+msgstr "Warenkorbauftrag"
+
+msgctxt "field:sale.sale,nereid_user:"
+msgid "Nereid User"
+msgstr "Nereid Benutzer"
+
+msgctxt "field:sale.sale,website:"
+msgid "Website"
+msgstr "Website"
+
+msgctxt "model:ir.action,name:act_sale_form_cart"
+msgid "Cart Sales"
+msgstr "Warenkorb-Verkäufe"
+
+msgctxt "model:ir.action,name:act_sale_form_draft"
+msgid "Draft Sales"
+msgstr "Verkaufsentwürfe"
+
+msgctxt "model:ir.action,name:act_sale_form_quotation"
+msgid "Quotation Sales"
+msgstr "Verkaufsangebote"
+
+msgctxt "model:ir.ui.menu,name:menu_action_sale_cart"
+msgid "Cart Sales"
+msgstr "Warenkorb-Verkäufe"
+
+msgctxt "model:nereid.cart,name:"
+msgid "Shopping Cart plays the link between a customer's shopping experience"
+msgstr "Der Warenkorb"
+
+msgctxt "nereid:cart.py:"
+msgid "Be sensible! You can only add real quantities to cart"
+msgstr ""
+"Mengenüberschreitung. Bitte legen Sie nur sinnvolle Mengen in den Warenkorb"
+
+msgctxt "nereid:cart.py:"
+msgid "The order item has been successfully removed"
+msgstr "Der Artikel wurde erfolgreich entfernt"
+
+msgctxt "nereid:cart.py:"
+msgid "The product has been added to your cart"
+msgstr "Der Artikel wurde in den Warenkorb gelegt"
+
+msgctxt "nereid:cart.py:"
+msgid "This product is not for sale"
+msgstr "Dieser Artikel steht nicht zum Verkauf."
+
+msgctxt "nereid:cart.py:"
+msgid "Your cart has been updated with the product"
+msgstr "Ihr Warenkorb wurde aktualisiert"
+
+msgctxt "nereid:cart.py:"
+msgid "Your shopping cart has been cleared"
+msgstr "Ihr Warenkorb wurde geleert"
+
+msgctxt "nereid:forms.py:"
+msgid "Product"
+msgstr "Artikel"
+
+msgctxt "nereid:forms.py:"
+msgid "Quantity"
+msgstr "Menge"
+
+msgctxt "nereid:forms.py:"
+msgid "This field is required"
+msgstr "Dieses Feld muss ausgefüllt werden"
