@@ -19,6 +19,9 @@ from trytond.tests.test_tryton import POOL, USER, DB_NAME, CONTEXT
 from nereid.testing import NereidTestCase
 from trytond.transaction import Transaction
 
+from trytond.config import CONFIG
+CONFIG['data_path'] = '/tmp'
+
 
 class BaseTestCase(NereidTestCase):
     """
@@ -48,6 +51,9 @@ class BaseTestCase(NereidTestCase):
         self.Party = POOL.get('party.party')
         self.Locale = POOL.get('nereid.website.locale')
         self.Tax = POOL.get('account.tax')
+        self.StaticFolder = POOL.get("nereid.static.folder")
+        self.StaticFile = POOL.get("nereid.static.file")
+        self.ProductImageSet = POOL.get('product.product.imageset')
 
         self.templates = {
             'home.jinja': '{{get_flashed_messages()}}',
@@ -424,6 +430,21 @@ class BaseTestCase(NereidTestCase):
 class TestProduct(BaseTestCase):
     "Test Product"
 
+    def create_static_file(self, file_buffer, folder_name):
+        """
+        Creates the static file for testing
+        """
+        folder, = self.StaticFolder.create([{
+            'folder_name': folder_name,
+            'description': 'Test Folder'
+        }])
+
+        return self.StaticFile.create([{
+            'name': 'test.png',
+            'folder': folder.id,
+            'file_binary': file_buffer,
+        }])[0]
+
     def test_0010_test_guest_price(self):
         """
         Test the pricelist lookup algorithm
@@ -541,6 +562,85 @@ class TestProduct(BaseTestCase):
                     availability = json.loads(rv.data)
                     self.assertEqual(availability['forecast_quantity'], 20.00)
                     self.assertEqual(availability['quantity'], 10.00)
+
+    def test_0050_product_serialize(self):
+        """
+        Test serialize() method.
+        """
+        with Transaction().start(DB_NAME, USER, context=CONTEXT):
+            self.setup_defaults()
+            uom, = self.Uom.search([], limit=1)
+            file1 = self.create_static_file(buffer('test'), 'test')
+            file2 = self.create_static_file(buffer('test-again'), 'test-again')
+            app = self.get_app()
+
+            product_template, = self.ProductTemplate.create([{
+                'name': 'test template',
+                'type': 'goods',
+                'list_price': Decimal('10'),
+                'cost_price': Decimal('5'),
+                'default_uom': uom.id,
+                'description': 'Description of template',
+                'products': [
+                    ('create', self.ProductTemplate.default_products())
+                ],
+                'salable': True,
+                'sale_uom': uom.id,
+                'account_expense': self._get_account_by_kind('expense').id,
+                'account_revenue': self._get_account_by_kind('revenue').id,
+            }])
+            image1, = self.ProductImageSet.create([{
+                'name': 'template_image',
+                'template': product_template,
+                'image': file1
+            }])
+
+            product, = product_template.products
+            product.displayed_on_eshop = True
+            product.uri = 'uri1'
+            product.save()
+
+            image2, = self.ProductImageSet.create([{
+                'name': 'product_image',
+                'product': product,
+                'image': file2
+            }])
+            qty = 7
+
+            # Without login
+            with app.test_client() as c:
+                c.post(
+                    '/cart/add',
+                    data={
+                        'product': product.id,
+                        'quantity': qty,
+                    }
+                )
+                rv = c.get('/user_status')
+                data = json.loads(rv.data)
+
+                lines = data['status']['cart']['lines']
+
+                self.assertEquals(lines[0]['product']['id'], product.id)
+                self.assertTrue(lines[0]['product']['image'] is not None)
+
+            # With login
+            with app.test_client() as c:
+                self.login(c, 'email@example.com', 'password')
+                c.post(
+                    '/cart/add',
+                    data={
+                        'product': product.id,
+                        'quantity': qty,
+                    }
+                )
+                rv = c.get('/user_status')
+                data = json.loads(rv.data)
+
+                lines = data['status']['cart']['lines']
+
+                self.assertEquals(lines[0]['product']['id'], product.id)
+                self.assertTrue(lines[0]['product']['image'] is not None)
 
 
 def suite():

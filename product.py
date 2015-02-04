@@ -34,9 +34,10 @@ class Product:
                 'name': self.name,
                 'category': self.category and self.category.name or None,
                 'image': (
-                    self.image_sets[0].thumbnail.url() if self.image_sets else
-                    None
-                )
+                    self.default_image.transform_command().thumbnail(
+                        150, 150, 'a'
+                    ).url() if self.default_image else None
+                ),
             }
 
     def sale_price(self, quantity=0):
