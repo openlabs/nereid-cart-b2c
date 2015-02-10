@@ -350,14 +350,15 @@ class BaseTestCase(NereidTestCase):
             'credit_note_account': self._get_account_by_kind('other').id,
         }])
 
-        self.shop, = self.SaleShop.create([{
-            'name': 'Default Shop',
-            'price_list': shop_price_list,
-            'warehouse': warehouse,
-            'payment_term': payment_term,
-            'company': self.company.id,
-            'users': [('add', [USER])]
-        }])
+        with Transaction().set_context(company=self.company.id):
+            self.shop, = self.SaleShop.create([{
+                'name': 'Default Shop',
+                'price_list': shop_price_list,
+                'warehouse': warehouse,
+                'payment_term': payment_term,
+                'company': self.company.id,
+                'users': [('add', [USER])]
+            }])
         self.User.set_preferences({'shop': self.shop})
 
         self.create_website()
