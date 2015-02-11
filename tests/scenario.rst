@@ -145,26 +145,6 @@ Create payment term::
     >>> payment_term.lines.append(payment_term_line)
     >>> payment_term.save()
 
-Setup URLs::
-
-    >>> NereidSite = Model.get('nereid.website')
-    >>> URLMap = Model.get('nereid.url_map')
-    >>> URLRule = Model.get('nereid.url_rule')
-    >>> url_map = URLMap(name='Test Map')
-    >>> url_map.rules.append(URLRule(rule='/en_US/',
-    ...     endpoint='nereid.website.home', methods='("GET",)'))
-    >>> url_map.rules.append(URLRule(rule='/en_US/login',
-    ...     endpoint='nereid.website.login', methods='("GET", "POST")'))
-    >>> url_map.rules.append(URLRule(rule='/en_US/cart', 
-    ...     endpoint='nereid.cart.view_cart', methods='("GET", "POST")'))
-    >>> url_map.rules.append(URLRule(rule='/en_US/cart/clear', 
-    ...     endpoint='nereid.cart.clear_cart', methods='("GET",)'))
-    >>> url_map.rules.append(URLRule(rule='/en_US/cart/add', 
-    ...     endpoint='nereid.cart.add_to_cart', methods='("GET", "POST")'))
-    >>> url_map.rules.append(URLRule(rule='/en_US/cart/delete/<int:line>', 
-    ...     endpoint='nereid.cart.delete_from_cart', methods='("GET",)'))
-    >>> url_map.save()
-
 Create Templates::
 
     >>> LangObj = Model.get('ir.lang')
@@ -240,7 +220,7 @@ Setup Site::
     >>> rate.save()
     >>> countries = [c.id for c in Country.find([('code', 'in', ('IN', 'US'))])]
     >>> site = NereidSite(name='Test Site', 
-    ...     url_map=url_map, company=company.id, countries=countries,
+    ...     company=company.id, countries=countries,
     ...     product_template=product_list_template, currencies=currencies,
     ...     category_template=category_list_template,
     ...     default_language = english)
@@ -260,14 +240,14 @@ Load the WSGI App::
 Allow access without login ::
 
     >>> with app.test_client() as c:
-    ...     cart_response = c.get('/en_US/cart')
+    ...     cart_response = c.get('/cart')
     ...     cart_response
     <Response streamed [200 OK]>
 
 Call the cart with two different applications and assert they are not equal::
 
     >>> with app.test_client() as c:
-    ...     cart_response_2 = c.get('/en_US/cart')
+    ...     cart_response_2 = c.get('/cart')
     ...     cart_response_2
     <Response streamed [200 OK]>
     >>> cart_response.data == cart_response_2.data
@@ -283,7 +263,7 @@ Check if the Sale Order is created::
 Add an item to the cart::
 
      >>> with app.test_client() as c:
-     ...     c.post('/en_US/cart/add', data={
+     ...     c.post('/cart/add', data={
      ...         'product': product.id,
      ...         'quantity': 10,
      ...     })
@@ -307,7 +287,7 @@ Check if the Sale Order is created::
 Add the same item again to the cart, it will create a new cart/sale::
 
      >>> with app.test_client() as c:
-     ...     c.post('/en_US/cart/add', data={
+     ...     c.post('/cart/add', data={
      ...         'product': product.id,
      ...         'quantity': 20,
      ...     })
@@ -347,11 +327,11 @@ Create a new product::
 Add both products to the cart and verify::
 
     >>> with app.test_client() as c:
-    ...     c.post('/en_US/cart/add', data={
+    ...     c.post('/cart/add', data={
     ...         'product': product.id,
     ...         'quantity': 5,
     ...     })
-    ...     c.post('/en_US/cart/add', data={
+    ...     c.post('/cart/add', data={
     ...         'product': product2.id,
     ...         'quantity': 15,
     ...     })
@@ -378,11 +358,11 @@ Add both products to the cart and verify::
 Add both products to the cart, then delete a line, then clear cart and verify all::
 
     >>> with app.test_client() as c:
-    ...     c.post('/en_US/cart/add', data={
+    ...     c.post('/cart/add', data={
     ...         'product': product.id,
     ...         'quantity': 10,
     ...     })
-    ...     c.post('/en_US/cart/add', data={
+    ...     c.post('/cart/add', data={
     ...         'product': product2.id,
     ...         'quantity': 15,
     ...     })
@@ -396,7 +376,7 @@ Add both products to the cart, then delete a line, then clear cart and verify al
     ...     line2 = sale.lines[1]
     ...     line2.product.id
     ...     line2.quantity
-    ...     c.get('/en_US/cart/delete/' + str(line1.id))
+    ...     c.get('/cart/delete/' + str(line1.id))
     ...     sales = Sale.find([])
     ...     len(sales)
     ...     sale = sales[0]
@@ -404,7 +384,7 @@ Add both products to the cart, then delete a line, then clear cart and verify al
     ...     line = sale.lines[0]
     ...     line.product.id
     ...     line.quantity
-    ...     c.get('/en_US/cart/clear')
+    ...     c.get('/cart/clear')
     ...     sales = Sale.find([])
     ...     len(sales)
     ...     sale = sales[0]
@@ -429,10 +409,10 @@ Test cart with login::
 Call the response of /cart and check if it retains same cart::
 
     >>> with app.test_client() as client:
-    ...     client.post('/en_US/login', 
+    ...     client.post('/login', 
     ...         data=dict(email='user@example.com', password='password'))
-    ...     cart_response = client.get('/en_US/cart')
-    ...     cart_response_2 = client.get('/en_US/cart')
+    ...     cart_response = client.get('/cart')
+    ...     cart_response_2 = client.get('/cart')
     ...
     <Response streamed [302 FOUND]>
     >>> cart_response.data == cart_response_2.data
@@ -440,10 +420,10 @@ Call the response of /cart and check if it retains same cart::
 
 Add items to a cart::
     >>> with app.test_client() as client:
-    ...     client.post('/en_US/login', 
+    ...     client.post('/login', 
     ...         data=dict(email='user@example.com', password='password'))
-    ...     cart_response = client.get('/en_US/cart')
-    ...     client.post('/en_US/cart/add', data={
+    ...     cart_response = client.get('/cart')
+    ...     client.post('/cart/add', data={
     ...         'product': product.id,
     ...         'quantity': 10,
     ...     })
@@ -468,10 +448,10 @@ Check if the Sale Order is created::
 Add the same item but 20 units::
 
     >>> with app.test_client() as client:
-    ...     rv1 = client.post('/en_US/login', 
+    ...     rv1 = client.post('/login', 
     ...         data=dict(email='user@example.com', password='password'))
-    ...     cart_response = client.get('/en_US/cart')
-    ...     rv2 = client.post('/en_US/cart/add', data={
+    ...     cart_response = client.get('/cart')
+    ...     rv2 = client.post('/cart/add', data={
     ...         'product': product.id,
     ...         'quantity': 20,
     ...     })
@@ -496,10 +476,10 @@ Add the same item but 20 units::
 Now add 5 units of this product to the cart::
 
     >>> with app.test_client() as client:
-    ...     client.post('/en_US/login', 
+    ...     client.post('/login', 
     ...         data=dict(email='user@example.com', password='password'))
-    ...     cart_response = client.get('/en_US/cart')
-    ...     client.post('/en_US/cart/add', data={
+    ...     cart_response = client.get('/cart')
+    ...     client.post('/cart/add', data={
     ...         'product': product2.id,
     ...         'quantity': 5,
     ...     })
@@ -528,10 +508,10 @@ Now add 5 units of this product to the cart::
 Delete a line in the cart::
 
     >>> with app.test_client() as client:
-    ...     client.post('/en_US/login', 
+    ...     client.post('/login', 
     ...         data=dict(email='user@example.com', password='password'))
-    ...     cart_response = client.get('/en_US/cart')
-    ...     client.get('/en_US/cart/delete/' + str(line.id))
+    ...     cart_response = client.get('/cart')
+    ...     client.get('/cart/delete/' + str(line.id))
     <Response streamed [302 FOUND]>
     <Response streamed [302 FOUND]>
     >>> Sale = Model.get('sale.sale')
@@ -550,10 +530,10 @@ Delete a line in the cart::
 Test Clearing of cart::
 
     >>> with app.test_client() as client:
-    ...     client.post('/en_US/login', 
+    ...     client.post('/login', 
     ...         data=dict(email='user@example.com', password='password'))
-    ...     cart_response = client.get('/en_US/cart')
-    ...     client.get('/en_US/cart/clear')
+    ...     cart_response = client.get('/cart')
+    ...     client.get('/cart/clear')
     <Response streamed [302 FOUND]>
     <Response streamed [302 FOUND]>
     >>> Sale = Model.get('sale.sale')
@@ -575,15 +555,15 @@ Create another party::
 Now try to fetch cart for both the customers::
 
     >>> with app.test_client() as client:
-    ...     client.post('/en_US/login', 
+    ...     client.post('/login', 
     ...         data=dict(email='user@example.com', password='password'))
-    ...     client.get('/en_US/cart')
+    ...     client.get('/cart')
     <Response streamed [302 FOUND]>
     <Response streamed [200 OK]>
     >>> with app.test_client() as client:
-    ...     client.post('/en_US/login', 
+    ...     client.post('/login', 
     ...         data=dict(email='user@example2.com', password='password'))
-    ...     client.get('/en_US/cart')
+    ...     client.get('/cart')
     <Response streamed [302 FOUND]>
     <Response streamed [200 OK]>
     >>> Sale = Model.get('sale.sale')
