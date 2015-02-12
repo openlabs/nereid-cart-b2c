@@ -439,9 +439,7 @@ class Cart(ModelSQL):
             to_cart = cls.open_cart(True)
             # Transfer lines from one cart to another
             for from_line in guest_cart.sale.lines:
-                sale_line = to_cart.sale._add_or_update(
-                    from_line.product.id, from_line.quantity
-                )
+                sale_line = from_line.add_to(to_cart.sale)
                 sale_line.save()
 
         # Clear and delete the old cart
