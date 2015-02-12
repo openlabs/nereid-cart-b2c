@@ -174,3 +174,16 @@ class SaleLine:
                 ),
             })
         return res
+
+    def add_to(self, sale):
+        """
+        Copy sale_line to new sale.
+
+        Downstream modules can override this method to add change this behaviour
+        of copying.
+
+        :param sale: Sale active record.
+
+        :return: Newly created sale_line
+        """
+        return sale._add_or_update(self.product.id, self.quantity)
