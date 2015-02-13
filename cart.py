@@ -347,9 +347,11 @@ class Cart(ModelSQL):
                 flash(_("This product is not for sale"))
                 return redirect(request.referrer)
 
-            cart.sale._add_or_update(
+            sale_line = cart.sale._add_or_update(
                 form.product.data, form.quantity.data, action
             )
+            sale_line.save()
+
             if action == 'add':
                 flash(_('The product has been added to your cart'), 'info')
             else:
@@ -454,7 +456,10 @@ class Cart(ModelSQL):
             to_cart = cls.open_cart(True)
             # Transfer lines from one cart to another
             for from_line in guest_cart.sale.lines:
-                to_cart._add_or_update(from_line.product.id, from_line.quantity)
+                sale_line = to_cart._add_or_update(
+                    from_line.product.id, from_line.quantity
+                )
+                sale_line.save()
 
         # Clear and delete the old cart
         guest_cart._clear_cart()
