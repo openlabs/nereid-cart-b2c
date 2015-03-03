@@ -641,6 +641,10 @@ class TestProduct(BaseTestCase):
 
                 self.assertEquals(lines[0]['product']['id'], product.id)
                 self.assertTrue(lines[0]['product']['image'] is not None)
+                self.assertEqual(
+                    lines[0]['product']['url'],
+                    product.get_absolute_url(_external=True)
+                )
 
 
 def suite():
