@@ -162,6 +162,13 @@ class SaleLine:
         if purpose == 'cart':
             res.update({
                 'id': self.id,
+                'display_name': self.description,
+                'url': self.product.get_absolute_url(_external=True),
+                'image': (
+                    self.product.default_image.transform_command().thumbnail(
+                        150, 150, 'a'
+                    ).url() if self.product.default_image else None
+                ),
                 'product': self.product.serialize(purpose),
                 'quantity': number_format(self.quantity),
                 'unit': self.unit.symbol,
