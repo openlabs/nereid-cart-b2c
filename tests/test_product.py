@@ -623,6 +623,9 @@ class TestProduct(BaseTestCase):
 
                 self.assertEquals(lines[0]['product']['id'], product.id)
                 self.assertTrue(lines[0]['product']['image'] is not None)
+                self.assertEquals(
+                    lines[0]['display_name'], product.name
+                )
 
             # With login
             with app.test_client() as c:
@@ -644,6 +647,9 @@ class TestProduct(BaseTestCase):
                 self.assertEqual(
                     lines[0]['product']['url'],
                     product.get_absolute_url(_external=True)
+                )
+                self.assertEquals(
+                    lines[0]['display_name'], product.name
                 )
 
 
