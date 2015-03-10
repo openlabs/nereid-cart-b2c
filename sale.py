@@ -164,7 +164,9 @@ class SaleLine:
         if purpose == 'cart':
             res.update({
                 'id': self.id,
-                'display_name': self.description,
+                'display_name': (
+                    self.product and self.product.name or self.description
+                ),
                 'url': self.product.get_absolute_url(_external=True),
                 'image': (
                     self.product.default_image.transform_command().thumbnail(
