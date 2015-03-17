@@ -99,50 +99,40 @@ class Sale:
         SaleLine = Pool().get('sale.line')
 
         order_line = self.find_existing_line(product_id)
+
+        values = {
+            'product': product_id,
+            '_parent_sale.currency': self.currency.id,
+            '_parent_sale.party': self.party.id,
+            '_parent_sale.price_list': (
+                self.price_list.id if self.price_list else None
+            ),
+            'type': 'line',
+        }
+
         if order_line:
-            values = {
-                'product': product_id,
-                '_parent_sale.currency': self.currency.id,
-                '_parent_sale.party': self.party.id,
-                '_parent_sale.price_list': (
-                    self.price_list.id if self.price_list else None
-                ),
+            values.update({
                 'unit': order_line.unit.id,
                 'quantity': quantity if action == 'set'
                     else quantity + order_line.quantity,
-                'type': 'line',
-            }
-            values.update(SaleLine(**values).on_change_quantity())
-
-            new_values = {}
-            for key, value in values.iteritems():
-                if '.' not in key:
-                    new_values[key] = value
-            SaleLine.write([order_line], new_values)
-            return order_line
+            })
         else:
-            values = {
-                'product': product_id,
-                '_parent_sale.currency': self.currency.id,
-                '_parent_sale.party': self.party.id,
+            order_line = SaleLine()
+            values.update({
                 'sale': self.id,
-                'type': 'line',
                 'sequence': 10,
                 'quantity': quantity,
                 'unit': None,
                 'description': None,
-            }
-            if self.price_list:
-                values['_parent_sale.price_list'] = self.price_list.id
+            })
             values.update(SaleLine(**values).on_change_product())
-            values.update(SaleLine(**values).on_change_quantity())
-            new_values = {}
-            for key, value in values.iteritems():
-                if '.' not in key:
-                    new_values[key] = value
-                if key == 'taxes' and value:
-                    new_values[key] = [('add', value)]
-            return SaleLine.create([new_values])[0]
+
+        values.update(SaleLine(**values).on_change_quantity())
+
+        for key, value in values.iteritems():
+            if '.' not in key:
+                setattr(order_line, key, value)
+        return order_line
 
 
 class SaleLine:
@@ -172,6 +162,15 @@ class SaleLine:
         if purpose == 'cart':
             res.update({
                 'id': self.id,
+                'display_name': (
+                    self.product and self.product.name or self.description
+                ),
+                'url': self.product.get_absolute_url(_external=True),
+                'image': (
+                    self.product.default_image.transform_command().thumbnail(
+                        150, 150, 'a'
+                    ).url() if self.product.default_image else None
+                ),
                 'product': self.product.serialize(purpose),
                 'quantity': number_format(self.quantity),
                 'unit': self.unit.symbol,
@@ -182,3 +181,16 @@ class SaleLine:
                 ),
             })
         return res
+
+    def add_to(self, sale):
+        """
+        Copy sale_line to new sale.
+
+        Downstream modules can override this method to add change this behaviour
+        of copying.
+
+        :param sale: Sale active record.
+
+        :return: Newly created sale_line
+        """
+        return sale._add_or_update(self.product.id, self.quantity)

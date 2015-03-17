@@ -7,7 +7,6 @@
     :copyright: (c) 2010-2014 by Openlabs Technologies & Consulting (P) LTD
     :license: GPLv3, see LICENSE for more details
 '''
-import warnings
 from decimal import Decimal
 from functools import partial
 
@@ -347,9 +346,11 @@ class Cart(ModelSQL):
                 flash(_("This product is not for sale"))
                 return redirect(request.referrer)
 
-            cart.sale._add_or_update(
+            sale_line = cart.sale._add_or_update(
                 form.product.data, form.quantity.data, action
             )
+            sale_line.save()
+
             if action == 'add':
                 flash(_('The product has been added to your cart'), 'info')
             else:
@@ -358,22 +359,6 @@ class Cart(ModelSQL):
                 return jsonify(message='OK')
 
         return redirect(url_for('nereid.cart.view_cart'))
-
-    def _add_or_update(self, product_id, quantity, action='set'):
-        '''Add item as a line or if a line with item exists
-        update it for the quantity
-
-        :param product: ID of the product
-        :param quantity: Quantity
-        :param action: set - set the quantity to the given quantity
-                       add - add quantity to existing quantity
-        '''
-        warnings.warn(
-            "cart._add_or_update will be deprecated. "
-            "Use cart.sale._add_or_update instead",
-            DeprecationWarning, stacklevel=2
-        )
-        return self.sale._add_or_update(product_id, quantity, action)
 
     @classmethod
     @route('/cart/delete/<int:line>', methods=['DELETE', 'POST'])
@@ -454,7 +439,8 @@ class Cart(ModelSQL):
             to_cart = cls.open_cart(True)
             # Transfer lines from one cart to another
             for from_line in guest_cart.sale.lines:
-                to_cart._add_or_update(from_line.product.id, from_line.quantity)
+                sale_line = from_line.add_to(to_cart.sale)
+                sale_line.save()
 
         # Clear and delete the old cart
         guest_cart._clear_cart()
