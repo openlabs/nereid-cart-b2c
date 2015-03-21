@@ -152,14 +152,14 @@ class SaleLine:
         Serialize SaleLine data
         """
         res = {}
-        currency_format = partial(
-            numbers.format_currency, currency=self.sale.currency.code,
-            locale=request.nereid_language.code
-        )
-        number_format = partial(
-            numbers.format_number, locale=request.nereid_language.code
-        )
         if purpose == 'cart':
+            currency_format = partial(
+                numbers.format_currency, currency=self.sale.currency.code,
+                locale=request.nereid_language.code
+            )
+            number_format = partial(
+                numbers.format_number, locale=request.nereid_language.code
+            )
             res.update({
                 'id': self.id,
                 'display_name': (
