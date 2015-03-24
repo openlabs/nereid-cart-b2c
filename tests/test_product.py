@@ -567,6 +567,8 @@ class TestProduct(BaseTestCase):
         """
         Test serialize() method.
         """
+        Media = POOL.get('product.media')
+
         with Transaction().start(DB_NAME, USER, context=CONTEXT):
             self.setup_defaults()
             uom, = self.Uom.search([], limit=1)
@@ -588,17 +590,21 @@ class TestProduct(BaseTestCase):
                 'sale_uom': uom.id,
                 'account_expense': self._get_account_by_kind('expense').id,
                 'account_revenue': self._get_account_by_kind('revenue').id,
+                'media': [('create', [{
+                    'static_file': file1.id,
+                }])],
             }])
 
             product, = product_template.products
             product.displayed_on_eshop = True
-            product.uri = 'uri1'
+            product.uri = 'uri'
             product.save()
 
-            file1.product = product
-            file2.product = product
-            file1.save()
-            file2.save()
+            product_media = Media(**{
+                'static_file': file2.id,
+                'product': product.id,
+            })
+            product_media.save()
 
             qty = 7
 
