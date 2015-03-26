@@ -29,15 +29,15 @@ class Website:
     """
     __name__ = 'nereid.website'
 
-    #: The shop in which the sales will be registered. It is recommended
-    #: to create a different shop for each website. The shop's price_list,
+    #: The channel in which the sales will be registered. It is recommended
+    #: to create a different channel for each website. The channel's price_list,
     #: warehouse and sale order sequences are respected by nereid cart
     #:
     #: .. versionadded::3.2.1.0
     #:
-    shop = fields.Many2One(
-        'sale.shop', 'Shop', required=True,
-        domain=[('users', '=', Eval('application_user'))],
+    channel = fields.Many2One(
+        'sale.channel', 'Channel', required=True,
+        domain=[('create_users', '=', Eval('application_user'))],
         depends=['application_user']
     )
 
@@ -46,20 +46,20 @@ class Website:
     #:
     #: .. versionchanged::3.2.1.0
     #:
-    #:     This information is now fetched from shop
+    #:     This information is now fetched from channel
     warehouse = fields.Function(
         fields.Many2One('stock.location', 'Warehouse'),
-        'get_fields_from_shop'
+        'get_fields_from_channel'
     )
 
     #: Stock location to be used when calculating the stock.
     #:
     #: .. versionchanged::3.2.1.0
     #:
-    #:     This information is now fetched from shop
+    #:     This information is now fetched from channel
     stock_location = fields.Function(
         fields.Many2One('stock.location', 'Stock Location'),
-        'get_fields_from_shop'
+        'get_fields_from_channel'
     )
 
     #: Guest user to identify guest carts
@@ -71,10 +71,10 @@ class Website:
     #:
     #: .. versionchanged::3.2.1.0
     #:
-    #:     This information is now fetched from shop
+    #:     This information is now fetched from channel
     payment_term = fields.Function(
         fields.Many2One('account.invoice.payment_term', 'Payment Term'),
-        'get_fields_from_shop'
+        'get_fields_from_channel'
     )
 
     @classmethod
@@ -95,14 +95,14 @@ class Website:
         table.not_null_action('stock_location', action='remove')
         table.not_null_action('payment_term', action='remove')
 
-    def get_fields_from_shop(self, name):
+    def get_fields_from_channel(self, name):
         """
-        Return the information from the shop assigned to the website.
+        Return the information from the channel assigned to the website.
         """
         if name == 'stock_location':
-            return self.shop.warehouse.storage_location.id
+            return self.channel.warehouse.storage_location.id
 
-        return getattr(self.shop, name).id
+        return getattr(self.channel, name).id
 
     @classmethod
     def account_context(cls):

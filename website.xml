@@ -19,8 +19,8 @@
                   </xpath>
                   <xpath expr="/form/notebook/page[@id='catalog']" 
                       position="inside">
-                          <label name="shop"/>
-                          <field name="shop"/>
+                          <label name="channel"/>
+                          <field name="channel"/>
                   </xpath>
               </data>
               ]]>

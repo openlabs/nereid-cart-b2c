@@ -1,3 +1,24 @@
+Version 3.4.1.1
+===============
+
+* Depend on sale_channel module
+
+  The sale channel module is repalcement for sale shop module. While some
+  of the implementations remains same but in this all sale must belong to
+  a single channel.
+
+  Warning: There is no migration for this. You will have to create
+  a new channel on your own and update your website to have the new
+  pricelist.
+
+* Price list for anonymous users
+
+  From this version, the anonymous user prices are the prices of the
+  channel (from the price list of channel).
+
+  Migration: Ensure that you set the pricelist of the channel as the
+  same pricelist that was set for the guest user.
+
 Version 3.2.1.0
 ===============
 
