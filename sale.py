@@ -46,29 +46,30 @@ class Sale:
     def default_price_list():
         """Get the pricelist of active user. In the
         event that the logged in user does not have a pricelist set against
-        the user, the shop's pricelist is chosen.
+        the user, the channel's pricelist is chosen.
 
         :param user: active record of the nereid user
         """
         User = Pool().get('res.user')
         user = User(Transaction().user)
-        shop_price_list = user.shop.price_list.id if user.shop else None
+        channel_price_list = user.current_channel.price_list.id if \
+            user.current_channel else None
 
         if not has_request_context():
             # Not a nereid request
-            return shop_price_list
+            return channel_price_list
 
         # If control reaches here, then this is a nereid request. Lets try
         # and personalise the pricelist of the user logged in.
         if current_user.is_anonymous():
             # Sorry anonymous users, you get the shop price
-            return shop_price_list
+            return channel_price_list
 
         if current_user.party.sale_price_list:
             # There is a sale pricelist for the specific user's party.
             return current_user.party.sale_price_list.id
 
-        return shop_price_list
+        return channel_price_list
 
     def refresh_taxes(self):
         '''

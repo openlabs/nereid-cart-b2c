@@ -39,7 +39,7 @@ class BaseTestCase(NereidTestCase):
         self.ProductTemplate = POOL.get('product.template')
         self.Language = POOL.get('ir.lang')
         self.NereidWebsite = POOL.get('nereid.website')
-        self.SaleShop = POOL.get('sale.shop')
+        self.SaleChannel = POOL.get('sale.channel')
         self.Uom = POOL.get('product.uom')
         self.Country = POOL.get('country.country')
         self.Subdivision = POOL.get('country.subdivision')
@@ -248,7 +248,7 @@ class BaseTestCase(NereidTestCase):
         """
         return self.NereidWebsite.create([{
             'name': 'localhost',
-            'shop': self.shop,
+            'channel': self.channel,
             'company': self.company.id,
             'application_user': USER,
             'default_locale': self.locale_en_us.id,
@@ -289,13 +289,13 @@ class BaseTestCase(NereidTestCase):
                 'party': self.party.id,
                 'currency': self.usd
             }])
-
         self.User.write(
             [self.User(USER)], {
                 'main_company': self.company.id,
                 'company': self.company.id,
             }
         )
+
         CONTEXT.update(self.User.get_preferences(context_only=True))
 
         # Create Fiscal Year
@@ -305,7 +305,7 @@ class BaseTestCase(NereidTestCase):
         # Create a payment term
         payment_term, = self._create_payment_term()
 
-        shop_price_list, user_price_list = self._create_pricelists()
+        channel_price_list, user_price_list = self._create_pricelists()
 
         party1, = self.Party.create([{
             'name': 'Guest User',
@@ -371,15 +371,27 @@ class BaseTestCase(NereidTestCase):
         }])
 
         with Transaction().set_context(company=self.company.id):
-            self.shop, = self.SaleShop.create([{
-                'name': 'Default Shop',
-                'price_list': shop_price_list,
+            self.channel, = self.SaleChannel.create([{
+                'name': 'Default Channel',
+                'price_list': channel_price_list,
+                'invoice_method': 'order',
+                'shipment_method': 'order',
+                'source': 'manual',
+                'create_users': [('add', [USER])],
                 'warehouse': warehouse,
                 'payment_term': payment_term,
                 'company': self.company.id,
-                'users': [('add', [USER])]
             }])
-        self.User.set_preferences({'shop': self.shop})
+
+        self.User.set_preferences({'current_channel': self.channel})
+
+        self.User.write(
+            [self.User(USER)], {
+                'main_company': self.company.id,
+                'company': self.company.id,
+                'current_channel': self.channel,
+            }
+        )
 
         self.create_website()
 
@@ -567,6 +579,8 @@ class TestProduct(BaseTestCase):
         """
         Test serialize() method.
         """
+        Media = POOL.get('product.media')
+
         with Transaction().start(DB_NAME, USER, context=CONTEXT):
             self.setup_defaults()
             uom, = self.Uom.search([], limit=1)
@@ -588,17 +602,21 @@ class TestProduct(BaseTestCase):
                 'sale_uom': uom.id,
                 'account_expense': self._get_account_by_kind('expense').id,
                 'account_revenue': self._get_account_by_kind('revenue').id,
+                'media': [('create', [{
+                    'static_file': file1.id,
+                }])],
             }])
 
             product, = product_template.products
             product.displayed_on_eshop = True
-            product.uri = 'uri1'
+            product.uri = 'uri'
             product.save()
 
-            file1.product = product
-            file2.product = product
-            file1.save()
-            file2.save()
+            product_media = Media(**{
+                'static_file': file2.id,
+                'product': product.id,
+            })
+            product_media.save()
 
             qty = 7
 
