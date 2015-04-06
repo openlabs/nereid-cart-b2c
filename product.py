@@ -37,6 +37,8 @@ class Product:
                     150, 150, 'a'
                 ).url() if self.default_image else None),
             }
+        if hasattr(super(Product, self), 'serialize'):
+            return super(Product, self).serialize(purpose)
 
     def sale_price(self, quantity=0):
         """Return the Sales Price.
