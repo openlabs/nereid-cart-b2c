@@ -376,7 +376,7 @@ class BaseTestCase(NereidTestCase):
                 'price_list': channel_price_list,
                 'invoice_method': 'order',
                 'shipment_method': 'order',
-                'source': 'manual',
+                'source': 'webshop',
                 'create_users': [('add', [USER])],
                 'warehouse': warehouse,
                 'payment_term': payment_term,
