@@ -13,12 +13,14 @@ from product import Product
 from sale import Sale, SaleLine
 from cart import Cart
 from website import Website
+from channel import SaleChannel
 
 
 def register():
     Pool.register(
         Product,
         Sale,
+        SaleChannel,
         SaleLine,
         Cart,
         Website,
