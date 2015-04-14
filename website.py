@@ -37,7 +37,10 @@ class Website:
     #:
     channel = fields.Many2One(
         'sale.channel', 'Channel', required=True,
-        domain=[('create_users', '=', Eval('application_user'))],
+        domain=[
+            ('create_users', '=', Eval('application_user')),
+            ('source', '=', 'webshop'),
+        ],
         depends=['application_user']
     )
 
