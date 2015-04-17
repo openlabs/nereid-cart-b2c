@@ -13,8 +13,10 @@ from babel import numbers
 from trytond.pool import Pool, PoolMeta
 from trytond.model import fields
 from trytond.transaction import Transaction
-from nereid import current_user, url_for, request
+from nereid import current_user, url_for, request, redirect, flash, abort
+from nereid.contrib.locale import make_lazy_gettext
 from nereid.ctx import has_request_context
+_ = make_lazy_gettext('nereid_cart_b2c')
 
 __all__ = ['Sale', 'SaleLine']
 __metaclass__ = PoolMeta
@@ -195,3 +197,12 @@ class SaleLine:
         :return: Newly created sale_line
         """
         return sale._add_or_update(self.product.id, self.quantity)
+
+    def validate_for_product_inventory(self):
+        """
+        This method validates the sale line against the product's inventory
+        attributes. This method requires request context.
+        """
+        if has_request_context() and not self.product.can_buy:
+            flash(_('This product is no longer available'))
+            abort(redirect(request.referrer))

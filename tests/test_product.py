@@ -17,6 +17,7 @@ import pycountry
 import trytond.tests.test_tryton
 from trytond.tests.test_tryton import POOL, USER, DB_NAME, CONTEXT
 from nereid.testing import NereidTestCase
+from werkzeug.datastructures import Headers
 from trytond.transaction import Transaction
 from trytond.config import config
 
@@ -34,6 +35,7 @@ class BaseTestCase(NereidTestCase):
         self.Company = POOL.get('company.company')
         self.Party = POOL.get('party.party')
         self.Sale = POOL.get('sale.sale')
+        self.ShipmentOut = POOL.get('stock.shipment.out')
         self.Cart = POOL.get('nereid.cart')
         self.Product = POOL.get('product.product')
         self.ProductTemplate = POOL.get('product.template')
@@ -314,6 +316,9 @@ class BaseTestCase(NereidTestCase):
         party2, = self.Party.create([{
             'name': 'Registered User',
             'sale_price_list': user_price_list,
+            'addresses': [('create', [{
+                'name': 'An Address',
+            }])],
         }])
 
         party3, = self.Party.create([{
@@ -664,6 +669,78 @@ class TestProduct(BaseTestCase):
                 self.assertEquals(
                     lines[0]['display_name'], product.name
                 )
+
+    def test_0060_warehouse_quantity(self):
+        """
+        Test that product sale is affected by availability and warehouse
+        quantity
+        """
+        StockMove = POOL.get('stock.move')
+        Website = POOL.get('nereid.website')
+        Location = POOL.get('stock.location')
+        SaleLine = POOL.get('sale.line')
+
+        with Transaction().start(DB_NAME, USER, CONTEXT):
+            self.setup_defaults()
+            app = self.get_app()
+
+            website, = Website.search([])
+            supplier, = Location.search([('code', '=', 'SUP')])
+            stock1, = StockMove.create([{
+                'product': self.product1.id,
+                'uom': self.template1.sale_uom.id,
+                'quantity': 10,
+                'from_location': supplier,
+                'to_location': website.stock_location.id,
+                'company': website.company.id,
+                'unit_price': Decimal('1'),
+                'currency': website.currencies[0].id,
+                'planned_date': datetime.date.today(),
+                'effective_date': datetime.date.today(),
+                'state': 'draft',
+            }])
+            StockMove.write([stock1], {
+                'state': 'done'
+            })
+
+            headers = Headers([('Referer', '/')])
+
+            # Set product warehouse quantity
+            self.product1.min_warehouse_quantity = 11
+            self.product1.save()
+
+            with app.test_client() as c:
+                self.login(c, 'email@example.com', 'password')
+
+                rv = c.post(
+                    '/cart/add',
+                    data={
+                        'product': self.product1.id, 'quantity': 5
+                    },
+                    headers=headers
+                )
+                # Cannot add to cart, available quantity < warehouse quantity
+                self.assertTrue(rv.location.endswith('/'))
+                self.assertEqual(rv.status_code, 302)
+                self.assertEqual(SaleLine.search([], count=True), 0)
+
+            # Try a service product
+            self.product1.template.type = 'service'
+            self.product1.template.save()
+
+            with app.test_client() as c:
+                self.login(c, 'email@example.com', 'password')
+
+                rv = c.post(
+                    '/cart/add',
+                    data={
+                        'product': self.product1.id, 'quantity': 5
+                    },
+                )
+                # Add to cart proceeds normally
+                self.assertTrue(rv.location.endswith('/cart'))
+                self.assertEqual(rv.status_code, 302)
+                self.assertEqual(SaleLine.search([], count=True), 1)
 
 
 def suite():

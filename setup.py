@@ -89,7 +89,7 @@ setup(
         'trytond.modules.nereid_cart_b2c':
             info.get('xml', [])
             + info.get('translation', [])
-            + ['tryton.cfg', 'locale/*.po', 'tests/*.rst']
+            + ['tryton.cfg', 'locale/*.po', 'tests/*.rst', 'view/*.xml']
             + ['i18n/*.pot', 'i18n/pt_BR/LC_MESSAGES/*'],
     },
     classifiers=[

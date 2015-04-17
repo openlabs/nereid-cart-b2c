@@ -349,6 +349,11 @@ class Cart(ModelSQL):
             sale_line = cart.sale._add_or_update(
                 form.product.data, form.quantity.data, action
             )
+
+            # Validate that product availability in inventory is not less than
+            # warehouse quantity
+            sale_line.validate_for_product_inventory()
+
             sale_line.save()
 
             if action == 'add':
