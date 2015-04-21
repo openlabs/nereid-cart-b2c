@@ -203,6 +203,6 @@ class SaleLine:
         This method validates the sale line against the product's inventory
         attributes. This method requires request context.
         """
-        if has_request_context() and not self.product.can_buy:
+        if has_request_context() and not self.product.can_buy_from_eshop():
             flash(_('This product is no longer available'))
             abort(redirect(request.referrer))
