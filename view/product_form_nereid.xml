@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<data>
+    <xpath expr="/form/notebook/page[@id='ecomm_det']" position="after">
+        <!-- TODO: This page should not appear if product is not 'goods' type -->
+        <page string="Inventory Details" id="inventory_det"
+            states="{'invisible': Not(Bool(Eval('displayed_on_eshop')))}">
+            <label name="display_available_quantity"/>
+            <field name="display_available_quantity"/>
+            <newline/>
+            <label name="start_displaying_available_quantity"/>
+            <field name="start_displaying_available_quantity"/>
+            <label name="min_warehouse_quantity"/>
+            <field name="min_warehouse_quantity"/>
+        </page>
+    </xpath>
+</data>

@@ -12,6 +12,8 @@ from dateutil.relativedelta import relativedelta
 
 from trytond.transaction import Transaction
 from trytond.pool import PoolMeta, Pool
+from trytond.model import fields
+from trytond.pyson import Bool, Eval
 from nereid import request, cache, jsonify, abort, current_user, route
 from nereid.helpers import key_from_list
 
@@ -22,6 +24,136 @@ __metaclass__ = PoolMeta
 class Product:
     "Product extension for Nereid"
     __name__ = "product.product"
+
+    display_available_quantity = fields.Boolean(
+        "Display Available Quantity On Website?"
+    )
+
+    start_displaying_qty_digits = fields.Function(
+        fields.Integer('Start Quantity Digits'),
+        getter='on_change_with_start_displaying_qty_digits'
+    )
+
+    start_displaying_available_quantity = fields.Numeric(
+        'Start Quantity', digits=(16, Eval('start_displaying_qty_digits', 2)),
+        states={
+            'invisible': ~Bool(Eval('display_available_quantity')),
+        }, depends=[
+            'display_available_quantity', 'start_displaying_qty_digits'
+        ],
+        help=(
+            "Product's available quantity must be less than this to show on"
+            " website"
+        )
+    )
+
+    min_warehouse_quantity = fields.Numeric(
+        'Min Warehouse Quantity', digits=(16, 4),
+        help="Minimum quantity required in warehouse for orders"
+    )
+
+    can_buy = fields.Function(
+        fields.Boolean("Is Eligible For Purchase?"),
+        getter="get_can_buy"
+    )
+
+    @classmethod
+    def __setup__(cls):
+        super(Product, cls).__setup__()
+
+        cls._error_messages.update({
+            'start_displaying_positive': (
+                'This quantity should be always be positive'
+            ),
+        })
+
+    @classmethod
+    def validate(cls, records):
+        """
+        Validation method
+        """
+        super(Product, cls).validate(records)
+
+        for record in records:
+            record.validate_start_display_quantity()
+
+    def validate_start_display_quantity(self):
+        """
+        This method validates that `start_displaying_available_quantity` is
+        always positive.
+        """
+        if self.start_displaying_available_quantity and \
+                self.start_displaying_available_quantity <= 0:
+            self.raise_user_error('start_displaying_positive')
+
+    @staticmethod
+    def default_min_warehouse_quantity():
+        """
+        By default, min_warehouse_quantity is minus one. This is to handle the
+        normal sale order workflow.
+        """
+        return -1
+
+    @fields.depends('_parent_template')
+    def on_change_with_start_displaying_qty_digits(self, name=None):
+        """
+        Getter for start_displaying_qty_digits
+        """
+        return self.template.default_uom.digits or 2
+
+    def get_can_buy(self, name=None):
+        """
+        Getter for can_buy. This field is for inventory checking
+        purpose.
+        """
+        quantity = self.get_availability().get('quantity')
+
+        if self.type != 'goods':
+            # If product type is not goods, then inventory need not be checked
+            return True
+
+        if self.min_warehouse_quantity < 0 or \
+                self.min_warehouse_quantity is None:
+            # If min_warehouse_quantity is negative (back order) or not set,
+            # product is in stock
+            return True
+        elif quantity > self.min_warehouse_quantity:
+            # If min_warehouse_quantity is less than available quantity, product
+            # is in stock
+            return True
+        else:
+            # In all other cases, product is not in stock
+            return False
+
+    def inventory_status(self):
+        """
+        This method returns the inventory status for the given product which can
+        have the following messages -:
+          * Out Of Stock
+          * In Stock
+          * X <UOM> left
+
+        It returns a tuple of the form -:
+          ('in_stock', 'In Stock')
+        whose elements are decided by the fields min_warehouse_quantity,
+        start_displaying_available_quantity and the product's current quantity.
+
+        The first element of the tuple can be used in future to decide things
+        such as color scheming in template. The second element of the tuple is
+        the message to show.
+        """
+        if self.can_buy:
+            status, message = 'in_stock', 'In stock'
+        else:
+            status, message = 'out_of_stock', 'Out of stock'
+
+        quantity = self.get_availability().get('quantity')
+
+        if status == 'in_stock' and self.display_available_quantity and \
+                quantity <= self.start_displaying_available_quantity:
+            message = '%s %s left' % (quantity, self.default_uom.name)
+
+        return status, message
 
     def serialize(self, purpose=None):
         """
