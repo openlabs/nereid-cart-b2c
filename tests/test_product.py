@@ -386,6 +386,10 @@ class BaseTestCase(NereidTestCase):
                 'warehouse': warehouse,
                 'payment_term': payment_term,
                 'company': self.company.id,
+                'default_account_expense':
+                    self._get_account_by_kind('expense').id,
+                'default_account_revenue':
+                    self._get_account_by_kind('revenue').id,
             }])
 
         self.User.set_preferences({'current_channel': self.channel})
