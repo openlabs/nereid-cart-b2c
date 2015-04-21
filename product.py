@@ -52,11 +52,6 @@ class Product:
         help="Minimum quantity required in warehouse for orders"
     )
 
-    can_buy = fields.Function(
-        fields.Boolean("Is Eligible For Purchase?"),
-        getter="get_can_buy"
-    )
-
     @classmethod
     def __setup__(cls):
         super(Product, cls).__setup__()
@@ -101,10 +96,10 @@ class Product:
         """
         return self.template.default_uom.digits or 2
 
-    def get_can_buy(self, name=None):
+    def can_buy_from_eshop(self):
         """
-        Getter for can_buy. This field is for inventory checking
-        purpose.
+        This function is used for inventory checking purpose. It returns a
+        boolean result on the basis of fields such as min_warehouse_quantity.
         """
         quantity = self.get_availability().get('quantity')
 
@@ -142,7 +137,7 @@ class Product:
         such as color scheming in template. The second element of the tuple is
         the message to show.
         """
-        if self.can_buy:
+        if self.can_buy_from_eshop():
             status, message = 'in_stock', 'In stock'
         else:
             status, message = 'out_of_stock', 'Out of stock'
