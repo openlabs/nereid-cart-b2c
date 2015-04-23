@@ -4,13 +4,14 @@
         <!-- TODO: This page should not appear if product is not 'goods' type -->
         <page string="Inventory Details" id="inventory_det"
             states="{'invisible': Not(Bool(Eval('displayed_on_eshop')))}">
-            <label name="display_available_quantity"/>
-            <field name="display_available_quantity"/>
-            <newline/>
-            <label name="start_displaying_available_quantity"/>
-            <field name="start_displaying_available_quantity"/>
+            <label name="show_availability_message"/>
+            <field name="show_availability_message"/>
             <label name="min_warehouse_quantity"/>
             <field name="min_warehouse_quantity"/>
+            <label name="display_available_quantity"/>
+            <field name="display_available_quantity"/>
+            <label name="start_displaying_available_quantity"/>
+            <field name="start_displaying_available_quantity"/>
         </page>
     </xpath>
 </data>
