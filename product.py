@@ -13,12 +13,17 @@ from dateutil.relativedelta import relativedelta
 from trytond.transaction import Transaction
 from trytond.pool import PoolMeta, Pool
 from trytond.model import fields
-from trytond.pyson import Bool, Eval
+from trytond.pyson import Bool, Eval, Or
 from nereid import request, cache, jsonify, abort, current_user, route
 from nereid.helpers import key_from_list
 
 __all__ = ['Product']
 __metaclass__ = PoolMeta
+
+STATES = {
+    'invisible': ~Bool(Eval('show_availability_message')),
+}
+DEPENDS = ['show_availability_message']
 
 
 class Product:
@@ -31,7 +36,8 @@ class Product:
     )
 
     display_available_quantity = fields.Boolean(
-        "Display Available Quantity On Website?"
+        "Display Available Quantity On Website?",
+        states=STATES, depends=DEPENDS
     )
 
     start_displaying_qty_digits = fields.Function(
@@ -42,9 +48,13 @@ class Product:
     start_displaying_available_quantity = fields.Numeric(
         'Start Quantity', digits=(16, Eval('start_displaying_qty_digits', 2)),
         states={
-            'invisible': ~Bool(Eval('display_available_quantity')),
+            'invisible': Or(
+                ~Bool(Eval('show_availability_message')),
+                ~Bool(Eval('display_available_quantity')),
+            ),
         }, depends=[
             'display_available_quantity', 'start_displaying_qty_digits',
+            'show_availability_message'
         ],
         help=(
             "Product's available quantity must be less than this to show on"
@@ -54,7 +64,8 @@ class Product:
 
     min_warehouse_quantity = fields.Numeric(
         'Min Warehouse Quantity', digits=(16, 4),
-        help="Minimum quantity required in warehouse for orders"
+        help="Minimum quantity required in warehouse for orders",
+        states=STATES, depends=DEPENDS
     )
 
     @classmethod
