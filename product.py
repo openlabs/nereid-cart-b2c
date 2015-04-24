@@ -25,11 +25,6 @@ class Product:
     "Product extension for Nereid"
     __name__ = "product.product"
 
-    show_availability_message = fields.Boolean(
-        "Show Availability On Website",
-        help="Show inventory status on website"
-    )
-
     display_available_quantity = fields.Boolean(
         "Display Available Quantity On Website?"
     )
@@ -56,6 +51,15 @@ class Product:
         'Min Warehouse Quantity', digits=(16, 4),
         help="Minimum quantity required in warehouse for orders"
     )
+    is_backorder = fields.Function(
+        fields.Boolean("Is Backorder"), getter="get_is_backorder"
+    )
+
+    def get_is_backorder(self, name):
+        if self.min_warehouse_quantity is None or \
+                self.min_warehouse_quantity < 0:
+            return True
+        return False
 
     @classmethod
     def __setup__(cls):

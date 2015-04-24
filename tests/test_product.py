@@ -709,9 +709,13 @@ class TestProduct(BaseTestCase):
 
             headers = Headers([('Referer', '/')])
 
+            self.assertEqual(self.product1.is_backorder, True)
+
             # Set product warehouse quantity
             self.product1.min_warehouse_quantity = 11
             self.product1.save()
+
+            self.assertEqual(self.product1.is_backorder, False)
 
             with app.test_client() as c:
                 self.login(c, 'email@example.com', 'password')
