@@ -9,6 +9,7 @@
 '''
 from functools import partial
 from babel import numbers
+from decimal import Decimal
 
 from trytond.pool import Pool, PoolMeta
 from trytond.model import fields
@@ -100,8 +101,10 @@ class Sale:
                        add - add quantity to existing quantity
         '''
         SaleLine = Pool().get('sale.line')
+        Product = Pool().get('product.product')
 
         order_line = self.find_existing_line(product_id)
+        product = Product(product_id)
 
         values = {
             'product': product_id,
@@ -113,7 +116,9 @@ class Sale:
             'type': 'line',
         }
 
+        old_price = Decimal('0.0')
         if order_line:
+            old_price = order_line.unit_price
             values.update({
                 'unit': order_line.unit.id,
                 'quantity': quantity if action == 'set'
@@ -131,6 +136,23 @@ class Sale:
             values.update(SaleLine(**values).on_change_product())
 
         values.update(SaleLine(**values).on_change_quantity())
+
+        if old_price and old_price != values['unit_price']:
+            vals = (
+                product.name, self.currency.symbol, old_price,
+                self.currency.symbol, values['unit_price']
+            )
+            if old_price < values['unit_price']:
+                message = _(
+                    "The unit price of product %s increased from %s%d to "
+                    "%s%d." % vals
+                )
+            else:
+                message = _(
+                    "The unit price of product %s dropped from %s%d "
+                    "to %s%d." % vals
+                )
+            flash(message)
 
         for key, value in values.iteritems():
             if '.' not in key:

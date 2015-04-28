@@ -523,6 +523,78 @@ class TestCart(BaseTestCase):
                 sale.refresh_taxes()  # Refresh Taxes
                 self.assertEqual(sale.tax_amount, Decimal('3.50'))
 
+    def test_0140_price_change_on_quantity(self):
+        """
+        Test the add and set modes of add_to_cart
+        """
+        with Transaction().start(DB_NAME, USER, CONTEXT):
+            self.setup_defaults()
+
+            price_list, = self.PriceList.create([{
+                'name': 'Crazy Pricelist',
+                'company': self.company.id,
+                'lines': [
+                    ('create', [{
+                        'product': self.product1.id,
+                        'quantity': 2,
+                        'formula': 'unit_price - 1',
+                    }])
+                ],
+            }])
+            self.assertTrue(price_list)
+
+            app = self.get_app()
+
+            with app.test_client() as c:
+                self.login(c, 'email@example.com', 'password')
+
+                c.post(
+                    '/cart/add',
+                    data={
+                        'product': self.product1.id, 'quantity': 1
+                    }
+                )
+                rv = c.get('/cart')
+                self.assertEqual(rv.status_code, 200)
+                self.assertEqual(rv.data, 'Cart:1,1,10.00')
+
+                sale = self.Sale.search([])
+                self.assertEqual(len(sale), 1)
+                sale[0].price_list = price_list
+                sale[0].save()
+
+                self.templates.update({
+                    'shopping-cart.jinja':
+                        'Cart:{{ cart.id }},{{get_cart_size()|round|int}},'
+                        '{{cart.sale.total_amount}},{{get_flashed_messages()}}',
+                })
+                c.post(
+                    '/cart/add',
+                    data={
+                        'product': self.product1.id,
+                        'quantity': 1, 'action': 'add'
+                    }
+                )
+                rv = c.get('/cart')
+                self.assertEqual(rv.status_code, 200)
+                # Cart total must be 18 and not 20 due to price list
+                self.assertTrue('Cart:1,2,18.00' in rv.data)
+                self.assertTrue('dropped from' in rv.data)
+
+                # Set quantity back to 1
+                c.post(
+                    '/cart/add',
+                    data={
+                        'product': self.product1.id,
+                        'quantity': 1, 'action': 'set'
+                    }
+                )
+                rv = c.get('/cart')
+                self.assertEqual(rv.status_code, 200)
+                # Cart total must be 18 and not 20 due to price list
+                self.assertTrue('Cart:1,1,10.00' in rv.data)
+                self.assertTrue('increased from' in rv.data)
+
 
 def suite():
     "Cart test suite"
