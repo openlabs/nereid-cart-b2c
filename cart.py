@@ -361,7 +361,10 @@ class Cart(ModelSQL):
             else:
                 flash(_('Your cart has been updated with the product'), 'info')
             if request.is_xhr:
-                return jsonify(message='OK')
+                return jsonify(
+                    message='OK',
+                    line=sale_line.serialize(purpose='cart')
+                )
 
         return redirect(url_for('nereid.cart.view_cart'))
 
