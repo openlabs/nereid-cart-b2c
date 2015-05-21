@@ -180,6 +180,8 @@ class SaleLine:
                     'nereid.cart.delete_from_cart', line=self.id
                 ),
             })
+        elif hasattr(super(SaleLine, self), 'serialize'):
+            return super(SaleLine, self).serialize(purpose)  # pragma: no cover
         return res
 
     def add_to(self, sale):
