@@ -335,15 +335,18 @@ class Cart(ModelSQL):
             cart = cls.open_cart(create_order=True)
             action = request.values.get('action', 'set')
             if form.quantity.data <= 0:
-                flash(
-                    _('Be sensible! You can only add real quantities to cart')
-                )
+                message = _(
+                    'Be sensible! You can only add real quantities to cart')
+                if request.is_xhr:
+                    return jsonify(message=unicode(message)), 400
+                flash(message)
                 return redirect(url_for('nereid.cart.view_cart'))
 
             if not Product(form.product.data).template.salable:
+                message = _("This product is not for sale")
                 if request.is_xhr:
-                    return jsonify(message="This product is not for sale"), 400
-                flash(_("This product is not for sale"))
+                    return jsonify(message=unicode(message)), 400
+                flash(message)
                 return redirect(request.referrer)
 
             sale_line = cart.sale._add_or_update(
@@ -357,14 +360,15 @@ class Cart(ModelSQL):
             sale_line.save()
 
             if action == 'add':
-                flash(_('The product has been added to your cart'), 'info')
+                message = _('The product has been added to your cart')
             else:
-                flash(_('Your cart has been updated with the product'), 'info')
+                message = _('Your cart has been updated with the product')
             if request.is_xhr:
                 return jsonify(
-                    message='OK',
+                    message=unicode(message),
                     line=sale_line.serialize(purpose='cart')
-                )
+                ), 200
+            flash(message, 'info')
 
         return redirect(url_for('nereid.cart.view_cart'))
 
